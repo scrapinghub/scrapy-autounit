@@ -11,7 +11,7 @@ setuptools.setup(
     description='Automatic unit test generation for Scrapy.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://bitbucket.org/fcanobrash/scrapy-autounit',
+    url='https://github.com/fcanobrash/scrapy-autounit',
     packages=setuptools.find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',
