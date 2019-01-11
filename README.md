@@ -5,7 +5,7 @@ Scrapy Autounit is an automatic test generation tool for your Scrapy spiders.
 ## How it works?
 
 Scrapy Autounit generates test fixtures and tests cases as you run your spiders.
-The test fixtures are generated from the items that your spider yields, then the test cases evaluate those fixtures against your spiders' callbacks.
+The test fixtures are generated from the items and requests that your spider yields, then the test cases evaluate those fixtures against your spiders' callbacks.
 
 Scrapy Autounit generates fixtures and tests per spider and callback under the Scrapy project root directory.  
 Here is an example of the directory tree of your project once the tests are created:  
@@ -58,6 +58,8 @@ Then make sure you enable Scrapy Autounit:
 ```python
 AUTOUNIT_ENABLED = True
 ```
+**NOTE:** Make sure you turn AUTOUNIT_ENABLED on only when you are generating/updating fixtures/tests, otherwise it should be off.
+
 ### Generating tests
 To generate your fixtures and tests just run your spiders as usual, Scrapy Autounit will generate them for you.  
 If you want to **update** your tests and fixtures you only need to run your spiders again.
