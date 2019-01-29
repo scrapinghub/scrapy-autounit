@@ -111,12 +111,16 @@ def parse_request(request, spider):
     parsed_request['headers'] = parse_headers(parsed_request['headers'])
     parsed_request['body'] = parsed_request['body'].decode('utf-8')
 
-    parsed_request['meta'] = {}
+    _meta = {}
     for key, value in parsed_request.get('meta').items():
         if isinstance(value, scrapy.Request):
             _meta[key] = parse_request(value)
         elif isinstance(value, scrapy.Item):
             _meta[key] = parse_item(value)
+        else:
+            _meta[key] = value
+
+    parsed_request['meta'] = _meta
 
     return parsed_request
 
