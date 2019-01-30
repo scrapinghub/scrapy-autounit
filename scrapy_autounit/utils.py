@@ -111,7 +111,31 @@ def parse_request(request, spider):
     parsed_request['headers'] = parse_headers(parsed_request['headers'])
     parsed_request['body'] = parsed_request['body'].decode('utf-8')
 
+    _meta = {}
+    for key, value in parsed_request.get('meta').items():
+        if isinstance(value, scrapy.Request):
+            _meta[key] = parse_request(value)
+        elif isinstance(value, scrapy.Item):
+            _meta[key] = parse_item(value)
+        else:
+            _meta[key] = value
+
+    parsed_request['meta'] = _meta
+
     return parsed_request
+
+
+def parse_item(item):
+    if isinstance(item, (scrapy.Item, dict)):
+        _item = {}
+        for key, value in item.items():
+            _item[key] = parse_item(value)
+        return _item
+
+    if isinstance(item, (tuple, list)):
+        return [parse_item(value) for value in item]
+
+    return item
 
 
 def parse_items_with_requests(items, spider):
@@ -125,7 +149,7 @@ def parse_items_with_requests(items, spider):
         else:
             parsed_items.append({
                 'type': 'item',
-                'data': item
+                'data': parse_item(item)
             })
 
     return parsed_items
@@ -146,6 +170,7 @@ from scrapy_autounit.utils import test_generator
 
 class AutoUnit(unittest.TestCase):
     def test_{spider_name}_{callback_name}_{fixture_name}(self):
+        self.maxDiff = None
         test = test_generator(Path('{fixture_path}'))
         test(self)
 
@@ -170,11 +195,17 @@ def test_generator(fixture_path):
         with open(fixture_path) as f:
             data = json.load(f)
         fixture_items = data['items']
-        response = HtmlResponse(encoding='utf-8', **data['response'])
+
+        data['request'].pop('_encoding', None)
+        data['request'].pop('callback', None)
+
+        request = Request(callback=callback, **data['request'])
+        response = HtmlResponse(encoding='utf-8', request=request, **data['response'])
+
         callback_items = list(callback(response))
         for index, item in enumerate(callback_items):
             fixture_data = fixture_items[index]['data']
             if isinstance(item, Request):
                 item = parse_request(item, spider=spider)
-            self.assertEqual(fixture_data, item, 'Not equal!')
+            self.assertEqual(fixture_data, dict(item), 'Not equal!')
     return test
