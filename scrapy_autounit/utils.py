@@ -202,10 +202,21 @@ def test_generator(fixture_path):
         request = Request(callback=callback, **data['request'])
         response = HtmlResponse(encoding='utf-8', request=request, **data['response'])
 
+        settings = get_project_settings()
+        ignored_fields = settings.get(
+            'AUTOUNIT_IGNORED_FIELDS',
+            default=[]
+        )
+
         callback_items = list(callback(response))
         for index, item in enumerate(callback_items):
             fixture_data = fixture_items[index]['data']
             if isinstance(item, Request):
                 item = parse_request(item, spider=spider)
+            else:
+                for field in ignored_fields:
+                    item.pop(field, None)
+                    fixture_data.pop(field, None)
+
             self.assertEqual(fixture_data, dict(item), 'Not equal!')
     return test
