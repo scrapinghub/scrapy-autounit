@@ -69,10 +69,19 @@ def response_to_dict(response):
 
 
 def parse_headers(headers):
+    settings = get_project_settings()
+    exclude_headers = settings.get(
+        'AUTOUNIT_EXCLUDE_HEADERS',
+        default=[]
+    )
+    auth_headers = ['Authorization', 'Proxy-Authorization']
     parsed_headers = {}
     for key, header in headers.items():
         if isinstance(key, bytes):
             key = key.decode('utf-8')
+
+        if key in auth_headers or key in exclude_headers:
+            continue
 
         if isinstance(header, bytes):
             header = header.decode('utf-8')
