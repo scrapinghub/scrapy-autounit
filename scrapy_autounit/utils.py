@@ -181,16 +181,25 @@ def write_test(fixture_path):
 from pathlib import Path
 from scrapy_autounit.utils import test_generator
 
+
 class AutoUnit(unittest.TestCase):
     def test_{spider_name}_{callback_name}_{fixture_name}(self):
         self.maxDiff = None
-        test = test_generator(Path('{fixture_path}'))
+        json_path = (
+            Path(__file__) /
+            '../../../../fixtures' /
+            '{spider_name}' /
+            '{callback_name}' /
+            '{fixture_name}.json'
+        )
+        test = test_generator(json_path.resolve())
         test(self)
+
 
 if __name__ == '__main__':
     unittest.main()
-'''.format(fixture_name=fixture_name, fixture_path=fixture_path,
-        spider_name=spider_path.name, callback_name=callback_path.name)
+'''.format(fixture_name=fixture_name, spider_name=spider_path.name,
+        callback_name=callback_path.name)
 
     with open(test_path, 'w') as f:
         f.write(test_code)
