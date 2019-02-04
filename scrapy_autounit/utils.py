@@ -4,6 +4,7 @@ from pathlib import Path
 from itertools import islice
 from importlib import import_module
 
+from scrapy.item import Item
 from scrapy.http import HtmlResponse, Request
 from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.misc import walk_modules
@@ -68,6 +69,55 @@ def response_to_dict(response):
     }
 
 
+def get_spider_class(spider_name):
+    project_settings = get_project_settings()
+    spider_modules = project_settings.get('SPIDER_MODULES')
+
+    for spider_module in spider_modules:
+        modules = walk_modules(spider_module)
+        for module in islice(modules, 1, None):
+            for spider_class in iter_spider_classes(module):
+                if spider_class.name == spider_name:
+                    return spider_class
+    return None
+
+
+def parse_result(result, spider):
+    parsed_result = []
+    for _object in result:
+        parsed_result.append({
+            'type': 'request' if isinstance(_object, Request) else 'item',
+            'data': parse_object(_object, spider=spider)
+        })
+
+    return parsed_result
+
+
+def parse_object(_object, spider=None):
+    if isinstance(_object, Request):
+        _object = parse_request(_object, spider)
+    elif isinstance(_object, Item):
+        _object = parse_item(_object)
+    return _object
+
+
+def parse_request(request, spider):
+    parsed_request = request_to_dict(request, spider=spider)
+    if not parsed_request['callback']:
+        parsed_request['callback'] = 'parse'
+
+    parsed_request['headers'] = parse_headers(parsed_request['headers'])
+    parsed_request['body'] = parsed_request['body'].decode('utf-8')
+
+    _meta = {}
+    for key, value in parsed_request.get('meta').items():
+        _meta[key] = parse_object(value)
+
+    parsed_request['meta'] = _meta
+
+    return parsed_request
+
+
 def parse_headers(headers):
     settings = get_project_settings()
     exclude_headers = settings.get(
@@ -99,45 +149,16 @@ def parse_headers(headers):
     return parsed_headers
 
 
-def get_spider_class(spider_name):
-    project_settings = get_project_settings()
-    spider_modules = project_settings.get('SPIDER_MODULES')
-
-    for spider_module in spider_modules:
-        modules = walk_modules(spider_module)
-        for module in islice(modules, 1, None):
-            for spider_class in iter_spider_classes(module):
-                if spider_class.name == spider_name:
-                    return spider_class
-    return None
-
-
-def parse_request(request, spider):
-    parsed_request = request_to_dict(request, spider=spider)
-    if not parsed_request['callback']:
-        parsed_request['callback'] = 'parse'
-
-    parsed_request['headers'] = parse_headers(parsed_request['headers'])
-    parsed_request['body'] = parsed_request['body'].decode('utf-8')
-
-    _meta = {}
-    for key, value in parsed_request.get('meta').items():
-        if isinstance(value, scrapy.Request):
-            _meta[key] = parse_request(value)
-        elif isinstance(value, scrapy.Item):
-            _meta[key] = parse_item(value)
-        else:
-            _meta[key] = value
-
-    parsed_request['meta'] = _meta
-
-    return parsed_request
-
-
 def parse_item(item):
-    if isinstance(item, (scrapy.Item, dict)):
+    settings = get_project_settings()
+    ignored_fields = settings.get(
+        'AUTOUNIT_IGNORED_FIELDS',
+        default=[]
+    )
+    if isinstance(item, (Item, dict)):
         _item = {}
         for key, value in item.items():
+            if key in ignored_fields: continue
             _item[key] = parse_item(value)
         return _item
 
@@ -145,23 +166,6 @@ def parse_item(item):
         return [parse_item(value) for value in item]
 
     return item
-
-
-def parse_items_with_requests(items, spider):
-    parsed_items = []
-    for item in items:
-        if isinstance(item, scrapy.Request):
-            parsed_items.append({
-                'type': 'request',
-                'data': parse_request(item, spider=spider)
-            })
-        else:
-            parsed_items.append({
-                'type': 'item',
-                'data': parse_item(item)
-            })
-
-    return parsed_items
 
 
 def write_test(fixture_path):
@@ -203,29 +207,18 @@ def test_generator(fixture_path):
     def test(self):
         with open(fixture_path) as f:
             data = json.load(f)
-        fixture_items = data['items']
+        fixture_objects = data['result']
 
         data['request'].pop('_encoding', None)
         data['request'].pop('callback', None)
 
         request = Request(callback=callback, **data['request'])
-        response = HtmlResponse(encoding='utf-8', request=request, **data['response'])
+        response = HtmlResponse(encoding='utf-8',
+            request=request, **data['response'])
 
-        settings = get_project_settings()
-        ignored_fields = settings.get(
-            'AUTOUNIT_IGNORED_FIELDS',
-            default=[]
-        )
-
-        callback_items = list(callback(response))
-        for index, item in enumerate(callback_items):
-            fixture_data = fixture_items[index]['data']
-            if isinstance(item, Request):
-                item = parse_request(item, spider=spider)
-            else:
-                for field in ignored_fields:
-                    item.pop(field, None)
-                    fixture_data.pop(field, None)
-
-            self.assertEqual(fixture_data, dict(item), 'Not equal!')
+        callback_response = list(callback(response))
+        for index, _object in enumerate(callback_response):
+            fixture_data = fixture_objects[index]['data']
+            _object = parse_object(_object, spider=spider)
+            self.assertEqual(fixture_data, _object, 'Not equal!')
     return test

@@ -9,7 +9,7 @@ from .utils import (
     response_to_dict,
     get_or_create_fixtures_dir,
     parse_request,
-    parse_items_with_requests,
+    parse_result,
     get_autounit_base_path,
     write_test
 )
@@ -44,8 +44,8 @@ class AutounitMiddleware(object):
         write_test(path)
 
     def process_spider_output(self, response, result, spider):
-        items = []
-        for item in result: items.append(item)
+        _result = []
+        for x in result: _result.append(x)
 
         request = parse_request(response.request, spider)
         callback_name = request['callback']
@@ -53,7 +53,7 @@ class AutounitMiddleware(object):
         data = {
             'request': request,
             'response': response_to_dict(response),
-            'items': parse_items_with_requests(items, spider)
+            'result': parse_result(_result, spider)
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
@@ -72,4 +72,4 @@ class AutounitMiddleware(object):
             if r < self.max_fixtures:
                 self.add_sample(r + 1, fixtures_dir, data)
 
-        return items
+        return _result
