@@ -120,8 +120,8 @@ def parse_request(request, spider):
 
 def parse_headers(headers):
     settings = get_project_settings()
-    exclude_headers = settings.get(
-        'AUTOUNIT_EXCLUDE_HEADERS',
+    excluded_headers = settings.get(
+        'AUTOUNIT_EXCLUDED_HEADERS',
         default=[]
     )
     auth_headers = ['Authorization', 'Proxy-Authorization']
@@ -130,7 +130,7 @@ def parse_headers(headers):
         if isinstance(key, bytes):
             key = key.decode('utf-8')
 
-        if key in auth_headers or key in exclude_headers:
+        if key in auth_headers or key in excluded_headers:
             continue
 
         if isinstance(header, bytes):
@@ -151,14 +151,14 @@ def parse_headers(headers):
 
 def parse_item(item):
     settings = get_project_settings()
-    ignored_fields = settings.get(
-        'AUTOUNIT_IGNORED_FIELDS',
+    excluded_fields = settings.get(
+        'AUTOUNIT_EXCLUDED_FIELDS',
         default=[]
     )
     if isinstance(item, (Item, dict)):
         _item = {}
         for key, value in item.items():
-            if key in ignored_fields: continue
+            if key in excluded_fields: continue
             _item[key] = parse_item(value)
         return _item
 

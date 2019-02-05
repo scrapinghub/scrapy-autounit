@@ -92,12 +92,12 @@ Sets the maximum number of fixtures to store per callback.
 Minimum: 10  
 Default: 10
 
-**AUTOUNIT_IGNORED_FIELDS**  
-Sets a list of fields to be ignored when testing. It's useful for bypassing fields that return a different value on each run.  
+**AUTOUNIT_EXCLUDED_FIELDS**  
+Sets a list of fields to be excluded when recording and testing. It's useful for bypassing fields that return a different value on each run.  
 For example if you have a field that is always set to `datetime.now()` in your spider, you probably want to add that field to this list to be ignored on tests. Otherwise you'll get a different value when you're generating your fixtures than when you're running your tests, making your tests fail.  
 Default: []
 
-**AUTOUNIT_EXCLUDE_HEADERS**  
+**AUTOUNIT_EXCLUDED_HEADERS**  
 Sets a list of headers to exclude from requests recording.  
-Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default.  
+For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default.  
 Default: []
