@@ -79,7 +79,7 @@ python -m unittest discover -s autounit.tests.my_spider.my_callback
 ```
 ###### Test a specific fixture
 ```
-python -m unittest discover -s autounit.tests.my_spider.my_callback.test_fixture2
+python -m unittest autounit.tests.my_spider.my_callback.test_fixture2
 ```
 
 ## Settings
