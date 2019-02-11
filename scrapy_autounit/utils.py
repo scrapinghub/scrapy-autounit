@@ -1,4 +1,6 @@
+import re
 import json
+import types
 import scrapy
 from pathlib import Path
 from itertools import islice
@@ -168,6 +170,15 @@ def parse_item(item):
     return item
 
 
+def get_valid_identifier(name):
+    return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
+
+
+def get_spider_args(spider):
+    return {k: v for k, v in spider.__dict__.items()
+        if k not in ('crawler, settings, start_urls')}
+
+
 def write_test(fixture_path):
     fixture_name = fixture_path.stem
     callback_path = fixture_path.parent
@@ -183,7 +194,7 @@ from scrapy_autounit.utils import test_generator
 
 
 class AutoUnit(unittest.TestCase):
-    def test_{spider_name}_{callback_name}_{fixture_name}(self):
+    def test_{fn_spider_name}_{callback_name}_{fixture_name}(self):
         self.maxDiff = None
         json_path = (
             Path(__file__) /
@@ -198,24 +209,29 @@ class AutoUnit(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-'''.format(fixture_name=fixture_name, spider_name=spider_path.name,
-        callback_name=callback_path.name)
+'''.format(
+        fixture_name=fixture_name,
+        fn_spider_name=get_valid_identifier(spider_path.name),
+        spider_name=spider_path.name,
+        callback_name=callback_path.name
+    )
 
     with open(test_path, 'w') as f:
         f.write(test_code)
 
 
 def test_generator(fixture_path):
+    with open(fixture_path) as f:
+        data = json.load(f)
+
     callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
 
     spider_cls = get_spider_class(spider_name)
-    spider = spider_cls()
+    spider = spider_cls(**data.get('spider_args'))
     callback = getattr(spider, callback_name, None)
 
     def test(self):
-        with open(fixture_path) as f:
-            data = json.load(f)
         fixture_objects = data['result']
 
         data['request'].pop('_encoding', None)
@@ -225,9 +241,15 @@ def test_generator(fixture_path):
         response = HtmlResponse(encoding='utf-8',
             request=request, **data['response'])
 
-        callback_response = list(callback(response))
+        callback_response = callback(response)
+        if isinstance(callback_response, types.GeneratorType):
+            callback_response = list(callback_response)
+        else:
+            callback_response = [callback_response]
+
         for index, _object in enumerate(callback_response):
             fixture_data = fixture_objects[index]['data']
             _object = parse_object(_object, spider=spider)
             self.assertEqual(fixture_data, _object, 'Not equal!')
+
     return test

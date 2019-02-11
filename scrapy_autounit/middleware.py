@@ -11,7 +11,8 @@ from .utils import (
     parse_request,
     parse_result,
     get_autounit_base_path,
-    write_test
+    write_test,
+    get_spider_args
 )
 
 
@@ -53,7 +54,8 @@ class AutounitMiddleware(object):
         data = {
             'request': request,
             'response': response_to_dict(response),
-            'result': parse_result(_result, spider)
+            'result': parse_result(_result, spider),
+            'spider_args': get_spider_args(spider)
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
