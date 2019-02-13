@@ -93,11 +93,24 @@ Minimum: 10
 Default: 10
 
 **AUTOUNIT_EXCLUDED_FIELDS**  
-Sets a list of fields to be excluded when recording and testing. It's useful for bypassing fields that return a different value on each run.  
-For example if you have a field that is always set to `datetime.now()` in your spider, you probably want to add that field to this list to be ignored on tests. Otherwise you'll get a different value when you're generating your fixtures than when you're running your tests, making your tests fail.  
+Sets a list of fields to be excluded when recording your callbacks' items. It's useful to bypass fields that return a different value on each run.  
+For example if you have a field that is always set to `datetime.now()` in your spider, you probably want to add that field to this list to be excluded from fixtures. Otherwise you'll get a different value when you're generating your fixtures than when you're running your tests, making your tests fail.  
+Default: []
+
+**AUTOUNIT_SKIPPED_FIELDS**  
+Sets a list of item fields to be skipped when running your tests.  
+It's very similar to AUTOUNIT_EXCLUDED_FIELDS with the difference that these fields will still be recorded in fixtures but they'll be skipped on tests.  
+Default: []
+
+**AUTOUNIT_REQUEST_SKIPPED_FIELDS**  
+Sets a list of request fields to be skipped when running your tests.  
+Similar to AUTOUNIT_SKIPPED_FIELDS but applied to requests instead of items.  
 Default: []
 
 **AUTOUNIT_EXCLUDED_HEADERS**  
 Sets a list of headers to exclude from requests recording.  
 For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default.  
-Default: []
+Default: []  
+
+---
+**Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.

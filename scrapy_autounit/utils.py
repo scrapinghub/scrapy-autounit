@@ -15,8 +15,16 @@ from scrapy.utils.project import get_project_settings
 from scrapy.utils.conf import init_env, closest_scrapy_cfg
 
 
-def get_autounit_base_path():
+def get_settings(spider=None):
     settings = get_project_settings()
+    if spider:
+        spider_cls = type(spider)
+        settings.setdict(spider_cls.custom_settings)
+    return settings
+
+
+def get_autounit_base_path():
+    settings = get_settings()
     return Path(settings.get(
         'AUTOUNIT_BASE_PATH',
         default=get_project_dir() / 'autounit'
@@ -61,18 +69,18 @@ def add_file(data, path):
         json.dump(data, outfile, sort_keys=True, indent=2)
 
 
-def response_to_dict(response):
+def response_to_dict(response, spider):
     return {
         'url': response.url,
         'status': response.status,
         'body': response.body.decode('utf-8', 'replace'),
-        'headers': parse_headers(response.headers),
+        'headers': parse_headers(response.headers, spider),
         'flags': response.flags
     }
 
 
 def get_spider_class(spider_name):
-    project_settings = get_project_settings()
+    project_settings = get_settings()
     spider_modules = project_settings.get('SPIDER_MODULES')
 
     for spider_module in spider_modules:
@@ -95,37 +103,45 @@ def parse_result(result, spider):
     return parsed_result
 
 
-def parse_object(_object, spider=None):
+def parse_object(_object, spider=None, testing=False, already_parsed=False):
     if isinstance(_object, Request):
-        _object = parse_request(_object, spider)
-    elif isinstance(_object, Item):
-        _object = parse_item(_object)
-    return _object
+        return parse_request(_object, spider,
+            testing=testing, already_parsed=already_parsed)
+    return parse_item(_object, spider, testing=testing)
 
 
-def parse_request(request, spider):
-    parsed_request = request_to_dict(request, spider=spider)
-    if not parsed_request['callback']:
-        parsed_request['callback'] = 'parse'
+def parse_request(request, spider, testing=False, already_parsed=False):
+    parsed_request = request
+    if not already_parsed:
+        parsed_request = request_to_dict(request, spider=spider)
+        if not parsed_request['callback']:
+            parsed_request['callback'] = 'parse'
 
-    parsed_request['headers'] = parse_headers(parsed_request['headers'])
-    parsed_request['body'] = parsed_request['body'].decode('utf-8')
+        parsed_request['headers'] = parse_headers(
+            parsed_request['headers'], spider)
 
-    _meta = {}
-    for key, value in parsed_request.get('meta').items():
-        _meta[key] = parse_object(value)
+        parsed_request['body'] = parsed_request['body'].decode('utf-8')
 
-    parsed_request['meta'] = _meta
+        _meta = {}
+        for key, value in parsed_request.get('meta').items():
+            _meta[key] = parse_object(value, spider,
+                testing=testing, already_parsed=already_parsed)
+
+        parsed_request['meta'] = _meta
+
+    settings = get_settings(spider=spider)
+    skipped_fields = settings.get(
+        'AUTOUNIT_REQUEST_SKIPPED_FIELDS', default=[])
+    if testing:
+        for field in skipped_fields:
+            parsed_request.pop(field)
 
     return parsed_request
 
 
-def parse_headers(headers):
-    settings = get_project_settings()
-    excluded_headers = settings.get(
-        'AUTOUNIT_EXCLUDED_HEADERS',
-        default=[]
-    )
+def parse_headers(headers, spider):
+    settings = get_settings(spider=spider)
+    excluded_headers = settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
     auth_headers = ['Authorization', 'Proxy-Authorization']
     parsed_headers = {}
     for key, header in headers.items():
@@ -151,21 +167,20 @@ def parse_headers(headers):
     return parsed_headers
 
 
-def parse_item(item):
-    settings = get_project_settings()
-    excluded_fields = settings.get(
-        'AUTOUNIT_EXCLUDED_FIELDS',
-        default=[]
-    )
+def parse_item(item, spider, testing=False):
+    settings = get_settings(spider=spider)
+    excluded_fields = settings.get('AUTOUNIT_EXCLUDED_FIELDS', default=[])
+    skipped_fields = settings.get('AUTOUNIT_SKIPPED_FIELDS', default=[])
     if isinstance(item, (Item, dict)):
         _item = {}
         for key, value in item.items():
             if key in excluded_fields: continue
-            _item[key] = parse_item(value)
+            if testing and key in skipped_fields: continue
+            _item[key] = parse_item(value, spider, testing=testing)
         return _item
 
     if isinstance(item, (tuple, list)):
-        return [parse_item(value) for value in item]
+        return [parse_item(value, spider, testing=testing) for value in item]
 
     return item
 
@@ -248,8 +263,18 @@ def test_generator(fixture_path):
             callback_response = [callback_response]
 
         for index, _object in enumerate(callback_response):
-            fixture_data = fixture_objects[index]['data']
-            _object = parse_object(_object, spider=spider)
+            if fixture_objects[index].get('type') == 'request':
+                fixture_data = parse_request(
+                    fixture_objects[index]['data'],
+                    spider,
+                    testing=True,
+                    already_parsed=True
+                )
+            else:
+                fixture_data = parse_item(
+                    fixture_objects[index]['data'], spider, testing=True)
+
+            _object = parse_object(_object, spider=spider, testing=True)
             self.assertEqual(fixture_data, _object, 'Not equal!')
 
     return test

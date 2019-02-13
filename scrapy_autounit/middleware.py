@@ -53,7 +53,7 @@ class AutounitMiddleware(object):
 
         data = {
             'request': request,
-            'response': response_to_dict(response),
+            'response': response_to_dict(response, spider),
             'result': parse_result(_result, spider),
             'spider_args': get_spider_args(spider)
         }
