@@ -1,7 +1,7 @@
 import re
 import json
 import types
-import scrapy
+import os
 from pathlib import Path
 from itertools import islice
 from importlib import import_module
@@ -92,17 +92,6 @@ def get_spider_class(spider_name):
     return None
 
 
-def parse_result(result, spider):
-    parsed_result = []
-    for _object in result:
-        parsed_result.append({
-            'type': 'request' if isinstance(_object, Request) else 'item',
-            'data': parse_object(_object, spider=spider)
-        })
-
-    return parsed_result
-
-
 def parse_object(_object, spider=None, testing=False, already_parsed=False):
     if isinstance(_object, Request):
         return parse_request(_object, spider,
@@ -174,8 +163,8 @@ def parse_item(item, spider, testing=False):
     if isinstance(item, (Item, dict)):
         _item = {}
         for key, value in item.items():
-            if key in excluded_fields: continue
-            if testing and key in skipped_fields: continue
+            if key in excluded_fields or testing and key in skipped_fields:
+                continue
             _item[key] = parse_item(value, spider, testing=testing)
         return _item
 
@@ -191,7 +180,7 @@ def get_valid_identifier(name):
 
 def get_spider_args(spider):
     return {k: v for k, v in spider.__dict__.items()
-        if k not in ('crawler, settings, start_urls')}
+        if k not in ('crawler', 'settings', 'start_urls')}
 
 
 def write_test(fixture_path):
