@@ -92,17 +92,6 @@ def get_spider_class(spider_name):
     return None
 
 
-def parse_result(result, spider):
-    parsed_result = []
-    for _object in result:
-        parsed_result.append({
-            'type': 'request' if isinstance(_object, Request) else 'item',
-            'data': parse_object(_object, spider=spider)
-        })
-
-    return parsed_result
-
-
 def parse_object(_object, spider=None, testing=False, already_parsed=False):
     if isinstance(_object, Request):
         return parse_request(_object, spider,

@@ -1,6 +1,7 @@
 import random
 from pathlib import Path
 
+from scrapy.http import Request
 from scrapy.exceptions import NotConfigured
 
 from .utils import (
@@ -8,7 +9,7 @@ from .utils import (
     response_to_dict,
     get_or_create_fixtures_dir,
     parse_request,
-    parse_result,
+    parse_object,
     get_autounit_base_path,
     write_test,
     get_spider_args
@@ -42,8 +43,15 @@ class AutounitMiddleware:
         write_test(path)
 
     def process_spider_output(self, response, result, spider):
-        _result = []
-        for x in result: _result.append(x)
+        processed_result = []
+        out = []
+
+        for elem in result:
+            out.append(elem)
+            processed_result.append({
+                'type': 'request' if isinstance(elem, Request) else 'item',
+                'data': parse_object(elem, spider=spider)
+            })
 
         request = parse_request(response.request, spider)
         callback_name = request['callback']
@@ -51,7 +59,7 @@ class AutounitMiddleware:
         data = {
             'request': request,
             'response': response_to_dict(response, spider),
-            'result': parse_result(_result, spider),
+            'result': processed_result,
             'spider_args': get_spider_args(spider)
         }
 
@@ -71,4 +79,4 @@ class AutounitMiddleware:
             if r < self.max_fixtures:
                 self.add_sample(r + 1, fixtures_dir, data)
 
-        return _result
+        return out
