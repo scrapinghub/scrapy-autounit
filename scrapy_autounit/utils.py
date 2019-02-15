@@ -191,7 +191,7 @@ def get_valid_identifier(name):
 
 def get_spider_args(spider):
     return {k: v for k, v in spider.__dict__.items()
-        if k not in ('crawler, settings, start_urls')}
+        if k not in ('crawler', 'settings', 'start_urls')}
 
 
 def write_test(fixture_path):
