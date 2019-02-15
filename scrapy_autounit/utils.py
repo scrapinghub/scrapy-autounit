@@ -163,8 +163,8 @@ def parse_item(item, spider, testing=False):
     if isinstance(item, (Item, dict)):
         _item = {}
         for key, value in item.items():
-            if key in excluded_fields: continue
-            if testing and key in skipped_fields: continue
+            if key in excluded_fields or testing and key in skipped_fields:
+                continue
             _item[key] = parse_item(value, spider, testing=testing)
         return _item
 
