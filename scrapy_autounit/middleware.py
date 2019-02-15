@@ -1,11 +1,10 @@
 import random
-import scrapy
 from pathlib import Path
-from scrapy.utils.reqser import request_to_dict
+
+from scrapy.exceptions import NotConfigured
 
 from .utils import (
     add_file,
-    get_project_dir,
     response_to_dict,
     get_or_create_fixtures_dir,
     parse_request,
@@ -19,9 +18,7 @@ from .utils import (
 class AutounitMiddleware(object):
     def __init__(self, settings):
         if not settings.getbool('AUTOUNIT_ENABLED'):
-            raise scrapy.exceptions.NotConfigured(
-                'scrapy-autounit is not enabled'
-            )
+            raise NotConfigured('scrapy-autounit is not enabled')
 
         self.max_fixtures = settings.getint(
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',

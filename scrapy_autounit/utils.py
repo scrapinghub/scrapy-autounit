@@ -1,7 +1,7 @@
 import re
 import json
 import types
-import scrapy
+import os
 from pathlib import Path
 from itertools import islice
 from importlib import import_module
