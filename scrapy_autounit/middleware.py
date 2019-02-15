@@ -15,7 +15,7 @@ from .utils import (
 )
 
 
-class AutounitMiddleware(object):
+class AutounitMiddleware:
     def __init__(self, settings):
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
