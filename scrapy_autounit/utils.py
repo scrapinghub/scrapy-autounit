@@ -309,7 +309,7 @@ def test_generator(fixture_path):
         )
 
         callback_response = callback(response)
-        if isinstance(callback_response, (Request, dict)):
+        if isinstance(callback_response, (Item, Request, dict)):
             callback_response = [callback_response]
 
         for index, _object in enumerate(callback_response):
@@ -332,7 +332,7 @@ def test_generator(fixture_path):
 
             _object = parse_object(
                 _object,
-                spider=spider,
+                spider,
                 testing=True,
                 settings=settings
             )
