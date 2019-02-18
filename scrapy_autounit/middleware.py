@@ -12,7 +12,8 @@ from .utils import (
     parse_object,
     get_autounit_base_path,
     write_test,
-    get_spider_args
+    get_spider_args,
+    get_settings
 )
 
 
@@ -25,7 +26,8 @@ class AutounitMiddleware:
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
             default=10
         )
-        self.max_fixtures = self.max_fixtures if self.max_fixtures >= 10 else 10
+        self.max_fixtures = \
+            self.max_fixtures if self.max_fixtures >= 10 else 10
 
         self.base_path = get_autounit_base_path()
         Path.mkdir(self.base_path, exist_ok=True)
@@ -43,6 +45,8 @@ class AutounitMiddleware:
         write_test(path)
 
     def process_spider_output(self, response, result, spider):
+        settings = get_settings(spider)
+
         processed_result = []
         out = []
 
@@ -50,15 +54,15 @@ class AutounitMiddleware:
             out.append(elem)
             processed_result.append({
                 'type': 'request' if isinstance(elem, Request) else 'item',
-                'data': parse_object(elem, spider=spider)
+                'data': parse_object(elem, spider, settings=settings)
             })
 
-        request = parse_request(response.request, spider)
+        request = parse_request(response.request, spider, settings)
         callback_name = request['callback']
 
         data = {
             'request': request,
-            'response': response_to_dict(response, spider),
+            'response': response_to_dict(response, spider, settings),
             'result': processed_result,
             'spider_args': get_spider_args(spider)
         }
