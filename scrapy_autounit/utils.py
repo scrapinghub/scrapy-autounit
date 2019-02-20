@@ -1,9 +1,11 @@
 import re
 import json
 import os
+import zlib
 from pathlib import Path
 from itertools import islice
 from importlib import import_module
+from base64 import b64encode, b64decode
 
 from scrapy.item import Item
 from scrapy.http import HtmlResponse, Request
@@ -43,7 +45,7 @@ def get_project_dir():
     try:
         module = import_module(scrapy_module)
         return Path(module.__file__).parent.parent
-    except ImportError as exc:
+    except ImportError:
         return None
 
 
@@ -64,8 +66,22 @@ def create_tests_tree(base_path, spider_name, callback_name):
 
 
 def add_file(data, path):
+    data['response'] = compress_data(data['response'])
+    data['result'] = compress_data(data['result'])
     with open(path, 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=2)
+
+
+def compress_data(data):
+    str_data = json.dumps(data)
+    compressed_data = zlib.compress(str_data.encode('utf-8'), level=9)
+    return b64encode(compressed_data).decode('utf-8')
+
+
+def decompress_data(data):
+    compressed_data = b64decode(data.encode('utf-8'))
+    decompressed_data = zlib.decompress(compressed_data)
+    return json.loads(decompressed_data)
 
 
 def response_to_dict(response, spider, settings):
@@ -286,6 +302,11 @@ if __name__ == '__main__':
 def test_generator(fixture_path):
     with open(fixture_path) as f:
         data = json.load(f)
+
+    if not isinstance(data['response'], dict):
+        data['response'] = decompress_data(data['response'])
+    if not isinstance(data['result'], list):
+        data['result'] = decompress_data(data['result'])
 
     callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
