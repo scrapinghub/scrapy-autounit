@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='scrapy-autounit',
-    version='0.0.10',
+    version='0.0.11',
     author='',
     author_email='',
     description='Automatic unit test generation for Scrapy.',
