@@ -44,6 +44,15 @@ class AutounitMiddleware:
         add_file(data, path)
         write_test(path)
 
+    def process_spider_input(self, response, spider):
+        settings = get_settings(spider)
+        response.meta['_autounit'] = {
+            'request': parse_request(response.request, spider, settings),
+            'response': response_to_dict(response, spider, settings),
+            'spider_args': get_spider_args(spider)
+        }
+        return None
+
     def process_spider_output(self, response, result, spider):
         settings = get_settings(spider)
 
@@ -57,14 +66,15 @@ class AutounitMiddleware:
                 'data': parse_object(elem, spider, settings=settings)
             })
 
-        request = parse_request(response.request, spider, settings)
+        input_data = response.meta.pop('_autounit')
+        request = input_data['request']
         callback_name = request['callback']
 
         data = {
             'request': request,
-            'response': response_to_dict(response, spider, settings),
+            'response': input_data['response'],
             'result': processed_result,
-            'spider_args': get_spider_args(spider)
+            'spider_args': input_data['spider_args']
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)

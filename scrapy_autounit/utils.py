@@ -319,6 +319,7 @@ def test_generator(fixture_path):
         settings = get_settings(spider)
         fixture_objects = data['result']
 
+        data['request'].pop('_class', None)
         data['request'].pop('_encoding', None)
         data['request'].pop('callback', None)
 
