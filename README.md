@@ -113,5 +113,11 @@ Sets a list of headers to exclude from requests recording.
 For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default.  
 Default: []  
 
+**AUTOUNIT_COMPRESS**  
+Enables compression for responses and results in fixtures.  
+Can be useful to reduce fixtures file size if your spiders' responses are too big.  
+Scrapy Autounit will take care of decompressing the data later for testing.  
+Default: False
+
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.

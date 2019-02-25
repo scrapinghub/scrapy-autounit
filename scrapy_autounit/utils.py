@@ -65,9 +65,10 @@ def create_tests_tree(base_path, spider_name, callback_name):
     (base_path / 'tests' / spider_name / callback_name / '__init__.py').touch()
 
 
-def add_file(data, path):
-    data['response'] = compress_data(data['response'])
-    data['result'] = compress_data(data['result'])
+def add_file(data, path, compress):
+    if compress:
+        data['response'] = compress_data(data['response'])
+        data['result'] = compress_data(data['result'])
     with open(path, 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=2)
 
