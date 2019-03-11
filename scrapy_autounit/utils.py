@@ -179,13 +179,22 @@ def parse_request(
 
 def parse_headers(headers, spider, settings):
     excluded_headers = settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
+
     auth_headers = ['Authorization', 'Proxy-Authorization']
+    included_auth_headers = settings.get(
+        'AUTOUNIT_INCLUDED_AUTH_HEADERS',
+        default=[]
+    )
+
     parsed_headers = {}
     for key, header in headers.items():
         if isinstance(key, bytes):
             key = key.decode('utf-8')
 
-        if key in auth_headers or key in excluded_headers:
+        if (
+            key in excluded_headers or key in auth_headers and
+            key not in included_auth_headers
+        ):
             continue
 
         if isinstance(header, bytes):

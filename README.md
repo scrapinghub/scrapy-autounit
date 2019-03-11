@@ -110,8 +110,12 @@ Default: []
 
 **AUTOUNIT_EXCLUDED_HEADERS**  
 Sets a list of headers to exclude from requests recording.  
-For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default.  
-Default: []  
+For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default, if you want to include them in your fixtures see *`AUTOUNIT_INCLUDED_AUTH_HEADERS`*.  
+`Default: []`  
+
+**AUTOUNIT_INCLUDED_AUTH_HEADERS**  
+If you want to include `Authorization` or `Proxy-Authorization` headers in your fixtures, add one or both of them to this list.  
+`Default: []`
 
 **AUTOUNIT_COMPRESS**  
 Enables compression for responses and results in fixtures.  
