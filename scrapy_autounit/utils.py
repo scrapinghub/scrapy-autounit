@@ -1,7 +1,8 @@
 import re
-import json
 import os
+import json
 import zlib
+import pickle
 from pathlib import Path
 from itertools import islice
 from importlib import import_module
@@ -16,20 +17,10 @@ from scrapy.utils.project import get_project_settings
 from scrapy.utils.conf import init_env, closest_scrapy_cfg
 
 
-def get_settings(spider=None):
-    settings = get_project_settings()
-    if spider:
-        spider_cls = type(spider)
-        settings.setdict(spider_cls.custom_settings)
-    return settings
-
-
-def get_autounit_base_path():
-    settings = get_settings()
-    return Path(settings.get(
-        'AUTOUNIT_BASE_PATH',
-        default=get_project_dir() / 'autounit'
-    ))
+def merge_settings(project_settings, spider):
+    spider_cls = type(spider)
+    project_settings.setdict(spider_cls.custom_settings)
+    return project_settings
 
 
 def get_project_dir():
@@ -66,39 +57,51 @@ def create_tests_tree(base_path, spider_name, callback_name):
 
 
 def add_file(data, path, compress):
+    pickle_data(data)
     if compress:
-        data['response'] = compress_data(data['response'])
-        data['result'] = compress_data(data['result'])
+        compress_data(data)
     with open(path, 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=2)
 
 
 def compress_data(data):
-    str_data = json.dumps(data)
-    compressed_data = zlib.compress(str_data.encode('utf-8'), level=9)
-    return b64encode(compressed_data).decode('utf-8')
+    for key, value in data.items():
+        compressed = zlib.compress(value.encode('utf-8'), level=9)
+        data[key] = b64encode(compressed).decode('utf-8')
 
 
 def decompress_data(data):
-    compressed_data = b64decode(data.encode('utf-8'))
-    decompressed_data = zlib.decompress(compressed_data)
-    return json.loads(decompressed_data)
+    for key, value in data.items():
+        decoded = b64decode(value.encode('utf-8'))
+        try:
+            decompressed = zlib.decompress(decoded)
+            data[key] = decompressed
+        except zlib.error:
+            return
 
 
-def response_to_dict(response, spider, settings):
+def pickle_data(data):
+    for key, value in data.items():
+        data[key] = b64encode(pickle.dumps(value)).decode('utf-8')
+
+
+def unpickle_data(data):
+    for key, value in data.items():
+        data[key] = pickle.loads(b64decode(value))
+
+
+def response_to_dict(response, settings):
     return {
         'url': response.url,
         'status': response.status,
         'body': response.body.decode('utf-8', 'replace'),
-        'headers': parse_headers(response.headers, spider, settings),
+        'headers': response.headers,
         'flags': response.flags
     }
 
 
-def get_spider_class(spider_name):
-    project_settings = get_settings()
+def get_spider_class(spider_name, project_settings):
     spider_modules = project_settings.get('SPIDER_MODULES')
-
     for spider_module in spider_modules:
         modules = walk_modules(spider_module)
         for module in islice(modules, 1, None):
@@ -108,162 +111,62 @@ def get_spider_class(spider_name):
     return None
 
 
-def parse_object(
-    _object,
-    spider,
-    testing=False,
-    already_parsed=False,
-    settings=None
-):
-    if not settings:
-        settings = get_settings(spider)
-
+def parse_object(_object, spider, settings):
     if isinstance(_object, Request):
-        return parse_request(
-            _object,
-            spider,
-            settings,
-            testing=testing,
-            already_parsed=already_parsed
-        )
-    return parse_item(
-        _object,
-        spider,
-        settings,
-        testing=testing,
-        already_parsed=already_parsed
-    )
+        return parse_request(_object, spider, settings)
+
+    if isinstance(_object, (dict, Item)):
+        _object = _object.copy()
+        clean_item(_object, settings)
+
+    return _object
 
 
-def parse_request(
-    request,
-    spider,
-    settings,
-    testing=False,
-    already_parsed=False
-):
-    parsed_request = request
-    if not already_parsed:
-        parsed_request = request_to_dict(request, spider=spider)
-        if not parsed_request['callback']:
-            parsed_request['callback'] = 'parse'
+def parse_request(request, spider, settings):
+    _request = request_to_dict(request, spider=spider)
+    if not _request['callback']:
+        _request['callback'] = 'parse'
 
-        parsed_request['headers'] = parse_headers(
-            parsed_request['headers'],
-            spider,
-            settings
-        )
+    clean_headers(_request['headers'], settings)
+    _request['body'] = _request['body'].decode('utf-8')
 
-        parsed_request['body'] = parsed_request['body'].decode('utf-8')
+    _meta = {}
+    for key, value in _request.get('meta').items():
+        _meta[key] = parse_object(value, spider, settings)
+    _request['meta'] = _meta
 
-        _meta = {}
-        for key, value in parsed_request.get('meta').items():
-            _meta[key] = parse_object(
-                value,
-                spider,
-                testing=testing,
-                already_parsed=already_parsed,
-                settings=settings
-            )
+    clean_request(_request, settings)
 
-        parsed_request['meta'] = _meta
-
-    skipped_fields = settings.get(
-        'AUTOUNIT_REQUEST_SKIPPED_FIELDS', default=[])
-    if testing:
-        for field in skipped_fields:
-            parsed_request.pop(field)
-
-    return parsed_request
+    return _request
 
 
-def parse_headers(headers, spider, settings):
-    excluded_headers = settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
+def clean_request(request, settings):
+    _clean(request, settings, 'AUTOUNIT_REQUEST_SKIPPED_FIELDS')
 
+
+def clean_headers(headers, settings):
+    excluded = settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
     auth_headers = ['Authorization', 'Proxy-Authorization']
-    included_auth_headers = settings.get(
-        'AUTOUNIT_INCLUDED_AUTH_HEADERS',
-        default=[]
-    )
-
-    parsed_headers = {}
-    for key, header in headers.items():
-        if isinstance(key, bytes):
-            key = key.decode('utf-8')
-
-        if (
-            key in excluded_headers or key in auth_headers and
-            key not in included_auth_headers
-        ):
-            continue
-
-        if isinstance(header, bytes):
-            header = header.decode('utf-8')
-
-        if isinstance(header, list):
-            new_list = []
-            for item in header:
-                if isinstance(item, bytes):
-                    item = item.decode('utf-8')
-                new_list.append(item)
-            header = new_list
-
-        parsed_headers[key] = header
-
-    return parsed_headers
+    included = settings.get('AUTOUNIT_INCLUDED_AUTH_HEADERS', default=[])
+    excluded.extend([h for h in auth_headers if h not in included])
+    for header in excluded:
+        headers.pop(header, None)
+        headers.pop(header.encode(), None)
 
 
-def parse_item(
-    item,
-    spider,
-    settings,
-    testing=False,
-    already_parsed=False
-):
-    excluded_fields = settings.get('AUTOUNIT_EXCLUDED_FIELDS', default=[])
-    skipped_fields = settings.get('AUTOUNIT_SKIPPED_FIELDS', default=[])
+def clean_item(item, settings):
+    _clean(item, settings, 'AUTOUNIT_EXCLUDED_FIELDS')
+    _clean(item, settings, 'AUTOUNIT_SKIPPED_FIELDS')
 
-    if isinstance(item, (Item, dict)):
-        if already_parsed:
-            return {
-                k: v for k, v in item.items()
-                if k not in skipped_fields and k not in excluded_fields
-            }
 
-        _item = {}
-        for key, value in item.items():
-            if key in excluded_fields or (testing and key in skipped_fields):
-                continue
-            _item[key] = parse_item(
-                value,
-                spider,
-                settings,
-                testing=testing,
-                already_parsed=already_parsed
-            )
-        return _item
-
-    if isinstance(item, (tuple, list)):
-        return [parse_item(
-            value,
-            spider,
-            settings,
-            testing=testing,
-            already_parsed=already_parsed
-        ) for value in item]
-
-    return item
+def _clean(data, settings, name):
+    fields = settings.get(name, default=[])
+    for field in fields:
+        data.pop(field, None)
 
 
 def get_valid_identifier(name):
     return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
-
-
-def get_spider_args(spider):
-    return {
-        k: v for k, v in spider.__dict__.items()
-        if k not in ('crawler', 'settings', 'start_urls')
-    }
 
 
 def write_test(fixture_path):
@@ -313,20 +216,21 @@ def test_generator(fixture_path):
     with open(fixture_path) as f:
         data = json.load(f)
 
-    if not isinstance(data['response'], dict):
-        data['response'] = decompress_data(data['response'])
-    if not isinstance(data['result'], list):
-        data['result'] = decompress_data(data['result'])
+    decompress_data(data)
+    unpickle_data(data)
 
     callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
 
-    spider_cls = get_spider_class(spider_name)
+    settings = get_project_settings()
+
+    spider_cls = get_spider_class(spider_name, settings)
     spider = spider_cls(**data.get('spider_args'))
     callback = getattr(spider, callback_name, None)
 
+    merge_settings(settings, spider)
+
     def test(self):
-        settings = get_settings(spider)
         fixture_objects = data['result']
 
         data['request'].pop('_class', None)
@@ -345,29 +249,13 @@ def test_generator(fixture_path):
             callback_response = [callback_response]
 
         for index, _object in enumerate(callback_response):
+            fixture_data = fixture_objects[index]['data']
             if fixture_objects[index].get('type') == 'request':
-                fixture_data = parse_request(
-                    fixture_objects[index]['data'],
-                    spider,
-                    settings,
-                    testing=True,
-                    already_parsed=True
-                )
+                clean_request(fixture_data, settings)
             else:
-                fixture_data = parse_item(
-                    fixture_objects[index]['data'],
-                    spider,
-                    settings,
-                    testing=True,
-                    already_parsed=True
-                )
+                clean_item(fixture_data, settings)
 
-            _object = parse_object(
-                _object,
-                spider,
-                testing=True,
-                settings=settings
-            )
+            _object = parse_object(_object, spider, settings)
             self.assertEqual(fixture_data, _object, 'Not equal!')
 
     return test

@@ -10,10 +10,8 @@ from .utils import (
     get_or_create_fixtures_dir,
     parse_request,
     parse_object,
-    get_autounit_base_path,
     write_test,
-    get_spider_args,
-    get_settings
+    get_project_dir,
 )
 
 
@@ -22,6 +20,8 @@ class AutounitMiddleware:
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
 
+        self.settings = settings
+
         self.max_fixtures = settings.getint(
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
             default=10
@@ -29,7 +29,10 @@ class AutounitMiddleware:
         self.max_fixtures = \
             self.max_fixtures if self.max_fixtures >= 10 else 10
 
-        self.base_path = get_autounit_base_path()
+        self.base_path = Path(settings.get(
+            'AUTOUNIT_BASE_PATH',
+            default=get_project_dir() / 'autounit'
+        ))
         Path.mkdir(self.base_path, exist_ok=True)
 
         self.fixture_counters = {}
@@ -45,25 +48,24 @@ class AutounitMiddleware:
         write_test(path)
 
     def process_spider_input(self, response, spider):
-        settings = get_settings(spider)
         response.meta['_autounit'] = {
-            'request': parse_request(response.request, spider, settings),
-            'response': response_to_dict(response, spider, settings),
-            'spider_args': get_spider_args(spider)
+            'request': parse_request(response.request, spider, self.settings),
+            'response': response_to_dict(response, self.settings),
+            'spider_args': {
+                k: v for k, v in spider.__dict__.items()
+                if k not in ('crawler', 'settings', 'start_urls')
+            }
         }
         return None
 
     def process_spider_output(self, response, result, spider):
-        settings = get_settings(spider)
-
         processed_result = []
         out = []
-
         for elem in result:
             out.append(elem)
             processed_result.append({
                 'type': 'request' if isinstance(elem, Request) else 'item',
-                'data': parse_object(elem, spider, settings=settings)
+                'data': parse_object(elem, spider, self.settings)
             })
 
         input_data = response.meta.pop('_autounit')
@@ -86,7 +88,7 @@ class AutounitMiddleware:
             callback_name
         )
 
-        compress = settings.getbool('AUTOUNIT_COMPRESS')
+        compress = self.settings.getbool('AUTOUNIT_COMPRESS')
 
         if callback_counter < self.max_fixtures:
             self.add_sample(callback_counter + 1, fixtures_dir, data, compress)
