@@ -16,16 +16,8 @@ from scrapy.utils.project import get_project_settings
 from scrapy.utils.conf import init_env, closest_scrapy_cfg
 
 
-def get_settings(spider=None):
-    settings = get_project_settings()
-    if spider:
-        spider_cls = type(spider)
-        settings.setdict(spider_cls.custom_settings)
-    return settings
-
-
 def get_autounit_base_path():
-    settings = get_settings()
+    settings = get_project_settings()
     return Path(settings.get(
         'AUTOUNIT_BASE_PATH',
         default=get_project_dir() / 'autounit'
@@ -95,8 +87,7 @@ def response_to_dict(response, spider, settings):
     }
 
 
-def get_spider_class(spider_name):
-    project_settings = get_settings()
+def get_spider_class(project_settings, spider_name):
     spider_modules = project_settings.get('SPIDER_MODULES')
 
     for spider_module in spider_modules:
@@ -113,23 +104,17 @@ def parse_object(
     spider,
     testing=False,
     already_parsed=False,
-    settings=None
 ):
-    if not settings:
-        settings = get_settings(spider)
-
     if isinstance(_object, Request):
         return parse_request(
             _object,
             spider,
-            settings,
             testing=testing,
             already_parsed=already_parsed
         )
     return parse_item(
         _object,
         spider,
-        settings,
         testing=testing,
         already_parsed=already_parsed
     )
@@ -138,7 +123,6 @@ def parse_object(
 def parse_request(
     request,
     spider,
-    settings,
     testing=False,
     already_parsed=False
 ):
@@ -151,7 +135,6 @@ def parse_request(
         parsed_request['headers'] = parse_headers(
             parsed_request['headers'],
             spider,
-            settings
         )
 
         parsed_request['body'] = parsed_request['body'].decode('utf-8')
@@ -163,12 +146,11 @@ def parse_request(
                 spider,
                 testing=testing,
                 already_parsed=already_parsed,
-                settings=settings
             )
 
         parsed_request['meta'] = _meta
 
-    skipped_fields = settings.get(
+    skipped_fields = spider.settings.get(
         'AUTOUNIT_REQUEST_SKIPPED_FIELDS', default=[])
     if testing:
         for field in skipped_fields:
@@ -177,11 +159,12 @@ def parse_request(
     return parsed_request
 
 
-def parse_headers(headers, spider, settings):
-    excluded_headers = settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
+def parse_headers(headers, spider):
+    excluded_headers = spider.settings.get(
+        'AUTOUNIT_EXCLUDED_HEADERS', default=[])
 
     auth_headers = ['Authorization', 'Proxy-Authorization']
-    included_auth_headers = settings.get(
+    included_auth_headers = spider.settings.get(
         'AUTOUNIT_INCLUDED_AUTH_HEADERS',
         default=[]
     )
@@ -216,12 +199,13 @@ def parse_headers(headers, spider, settings):
 def parse_item(
     item,
     spider,
-    settings,
     testing=False,
     already_parsed=False
 ):
-    excluded_fields = settings.get('AUTOUNIT_EXCLUDED_FIELDS', default=[])
-    skipped_fields = settings.get('AUTOUNIT_SKIPPED_FIELDS', default=[])
+    excluded_fields = spider.settings.get(
+        'AUTOUNIT_EXCLUDED_FIELDS', default=[])
+    skipped_fields = spider.settings.get(
+        'AUTOUNIT_SKIPPED_FIELDS', default=[])
 
     if isinstance(item, (Item, dict)):
         if already_parsed:
@@ -237,7 +221,6 @@ def parse_item(
             _item[key] = parse_item(
                 value,
                 spider,
-                settings,
                 testing=testing,
                 already_parsed=already_parsed
             )
@@ -247,7 +230,6 @@ def parse_item(
         return [parse_item(
             value,
             spider,
-            settings,
             testing=testing,
             already_parsed=already_parsed
         ) for value in item]
@@ -321,12 +303,17 @@ def test_generator(fixture_path):
     callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
 
-    spider_cls = get_spider_class(spider_name)
+    settings = get_project_settings()
+    for k, v in data.get('settings', {}).items():
+        settings.set(k, v, 50)
+
+    spider_cls = get_spider_class(settings, spider_name)
+    spider_cls.update_settings(settings)
     spider = spider_cls(**data.get('spider_args'))
+    spider.settings = settings
     callback = getattr(spider, callback_name, None)
 
     def test(self):
-        settings = get_settings(spider)
         fixture_objects = data['result']
 
         data['request'].pop('_class', None)
@@ -349,7 +336,6 @@ def test_generator(fixture_path):
                 fixture_data = parse_request(
                     fixture_objects[index]['data'],
                     spider,
-                    settings,
                     testing=True,
                     already_parsed=True
                 )
@@ -357,7 +343,6 @@ def test_generator(fixture_path):
                 fixture_data = parse_item(
                     fixture_objects[index]['data'],
                     spider,
-                    settings,
                     testing=True,
                     already_parsed=True
                 )
@@ -366,7 +351,6 @@ def test_generator(fixture_path):
                 _object,
                 spider,
                 testing=True,
-                settings=settings
             )
             self.assertEqual(fixture_data, _object, 'Not equal!')
 

@@ -13,8 +13,15 @@ from .utils import (
     get_autounit_base_path,
     write_test,
     get_spider_args,
-    get_settings
 )
+
+
+def _copy_settings(settings):
+    out = {}
+    print(settings.attributes.keys())
+    for name in settings.getlist('AUTOUNIT_INCLUDED_SETTINGS', []):
+        out[name] = settings.get(name)
+    return out
 
 
 class AutounitMiddleware:
@@ -45,7 +52,7 @@ class AutounitMiddleware:
         write_test(path)
 
     def process_spider_input(self, response, spider):
-        settings = get_settings(spider)
+        settings = spider.settings
         response.meta['_autounit'] = {
             'request': parse_request(response.request, spider, settings),
             'response': response_to_dict(response, spider, settings),
@@ -54,7 +61,7 @@ class AutounitMiddleware:
         return None
 
     def process_spider_output(self, response, result, spider):
-        settings = get_settings(spider)
+        settings = spider.settings
 
         processed_result = []
         out = []
@@ -74,7 +81,8 @@ class AutounitMiddleware:
             'request': request,
             'response': input_data['response'],
             'result': processed_result,
-            'spider_args': input_data['spider_args']
+            'spider_args': input_data['spider_args'],
+            'settings': _copy_settings(settings),
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)

@@ -117,6 +117,10 @@ For security reasons, Autounit already excludes `Authorization` and `Proxy-Autho
 If you want to include `Authorization` or `Proxy-Authorization` headers in your fixtures, add one or both of them to this list.  
 `Default: []`
 
+**AUTOUNIT_INCLUDED_SETTINGS**
+Sets a list of settings names to be recorded in the generated test case.
+`Default: []`
+
 **AUTOUNIT_COMPRESS**  
 Enables compression for responses and results in fixtures.  
 Can be useful to reduce fixtures file size if your spiders' responses are too big.  
