@@ -41,10 +41,10 @@ class AutounitMiddleware:
     def from_crawler(cls, crawler):
         return cls(crawler.settings)
 
-    def add_sample(self, index, fixtures_dir, data, compress):
-        filename = 'fixture%s.json' % str(index)
+    def add_sample(self, index, fixtures_dir, data):
+        filename = 'fixture%s.txt' % str(index)
         path = fixtures_dir / filename
-        add_file(data, path, compress)
+        add_file(data, path)
         write_test(path)
 
     def process_spider_input(self, response, spider):
@@ -88,13 +88,11 @@ class AutounitMiddleware:
             callback_name
         )
 
-        compress = self.settings.getbool('AUTOUNIT_COMPRESS')
-
         if callback_counter < self.max_fixtures:
-            self.add_sample(callback_counter + 1, fixtures_dir, data, compress)
+            self.add_sample(callback_counter + 1, fixtures_dir, data)
         else:
             r = random.randint(0, callback_counter)
             if r < self.max_fixtures:
-                self.add_sample(r + 1, fixtures_dir, data, compress)
+                self.add_sample(r + 1, fixtures_dir, data)
 
         return out

@@ -16,8 +16,8 @@ Here is an example of the directory tree of your project once the tests are crea
     │   ├── fixtures
     │   │   └── my_spider
     │   │       └── my_callback
-    │   │           ├── fixture1.json
-    │   │           ├── fixture2.json
+    │   │           ├── fixture1.txt
+    │   │           ├── fixture2.txt
     │   │           ├── ...
     │   └── tests
     │       ├── __init__.py
@@ -116,12 +116,6 @@ For security reasons, Autounit already excludes `Authorization` and `Proxy-Autho
 **AUTOUNIT_INCLUDED_AUTH_HEADERS**  
 If you want to include `Authorization` or `Proxy-Authorization` headers in your fixtures, add one or both of them to this list.  
 `Default: []`
-
-**AUTOUNIT_COMPRESS**  
-Enables compression for responses and results in fixtures.  
-Can be useful to reduce fixtures file size if your spiders' responses are too big.  
-Scrapy Autounit will take care of decompressing the data later for testing.  
-`Default: False`
 
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.

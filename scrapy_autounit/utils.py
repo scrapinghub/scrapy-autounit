@@ -1,6 +1,5 @@
 import re
 import os
-import json
 import zlib
 import pickle
 from pathlib import Path
@@ -56,38 +55,26 @@ def create_tests_tree(base_path, spider_name, callback_name):
     (base_path / 'tests' / spider_name / callback_name / '__init__.py').touch()
 
 
-def add_file(data, path, compress):
-    pickle_data(data)
-    if compress:
-        compress_data(data)
+def add_file(data, path):
+    data = compress_data(pickle_data(data))
     with open(path, 'w') as outfile:
-        json.dump(data, outfile, sort_keys=True, indent=2)
+        outfile.write(data.decode('utf-8'))
 
 
 def compress_data(data):
-    for key, value in data.items():
-        compressed = zlib.compress(value.encode('utf-8'), level=9)
-        data[key] = b64encode(compressed).decode('utf-8')
+    return b64encode(zlib.compress(data, level=9))
 
 
 def decompress_data(data):
-    for key, value in data.items():
-        decoded = b64decode(value.encode('utf-8'))
-        try:
-            decompressed = zlib.decompress(decoded)
-            data[key] = decompressed
-        except zlib.error:
-            return
+    return zlib.decompress(b64decode(data))
 
 
 def pickle_data(data):
-    for key, value in data.items():
-        data[key] = b64encode(pickle.dumps(value)).decode('utf-8')
+    return b64encode(pickle.dumps(data))
 
 
 def unpickle_data(data):
-    for key, value in data.items():
-        data[key] = pickle.loads(b64decode(value))
+    return pickle.loads(b64decode(data))
 
 
 def response_to_dict(response, settings):
@@ -188,14 +175,14 @@ from scrapy_autounit.utils import test_generator
 class AutoUnit(unittest.TestCase):
     def test_{fn_spider_name}_{callback_name}_{fixture_name}(self):
         self.maxDiff = None
-        json_path = (
+        file_path = (
             Path(__file__) /
             '../../../../fixtures' /
             '{spider_name}' /
             '{callback_name}' /
-            '{fixture_name}.json'
+            '{fixture_name}.txt'
         )
-        test = test_generator(json_path.resolve())
+        test = test_generator(file_path.resolve())
         test(self)
 
 
@@ -213,11 +200,10 @@ if __name__ == '__main__':
 
 
 def test_generator(fixture_path):
-    with open(fixture_path) as f:
-        data = json.load(f)
+    with open(fixture_path, 'r') as f:
+        data = f.read()
 
-    decompress_data(data)
-    unpickle_data(data)
+    data = unpickle_data(decompress_data(data))
 
     callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
