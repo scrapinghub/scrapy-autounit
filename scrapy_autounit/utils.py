@@ -55,10 +55,13 @@ def create_tests_tree(base_path, spider_name, callback_name):
     (base_path / 'tests' / spider_name / callback_name / '__init__.py').touch()
 
 
-def add_file(data, path):
+def add_sample(index, fixtures_dir, data):
+    filename = 'fixture%s.txt' % str(index)
+    path = fixtures_dir / filename
     data = compress_data(pickle_data(data))
     with open(path, 'w') as outfile:
         outfile.write(data.decode('utf-8'))
+    write_test(path)
 
 
 def compress_data(data):

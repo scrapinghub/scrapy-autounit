@@ -5,7 +5,7 @@ from scrapy.http import Request
 from scrapy.exceptions import NotConfigured
 
 from .utils import (
-    add_file,
+    add_sample,
     response_to_dict,
     get_or_create_fixtures_dir,
     parse_request,
@@ -40,12 +40,6 @@ class AutounitMiddleware:
     @classmethod
     def from_crawler(cls, crawler):
         return cls(crawler.settings)
-
-    def add_sample(self, index, fixtures_dir, data):
-        filename = 'fixture%s.txt' % str(index)
-        path = fixtures_dir / filename
-        add_file(data, path)
-        write_test(path)
 
     def process_spider_input(self, response, spider):
         response.meta['_autounit'] = {
@@ -89,10 +83,10 @@ class AutounitMiddleware:
         )
 
         if callback_counter < self.max_fixtures:
-            self.add_sample(callback_counter + 1, fixtures_dir, data)
+            add_sample(callback_counter + 1, fixtures_dir, data)
         else:
             r = random.randint(0, callback_counter)
             if r < self.max_fixtures:
-                self.add_sample(r + 1, fixtures_dir, data)
+                add_sample(r + 1, fixtures_dir, data)
 
         return out
