@@ -10,14 +10,12 @@ from .utils import (
     get_or_create_fixtures_dir,
     parse_request,
     parse_object,
-    write_test,
     get_project_dir,
 )
 
 
 def _copy_settings(settings):
     out = {}
-    print(settings.attributes.keys())
     for name in settings.getlist('AUTOUNIT_INCLUDED_SETTINGS', []):
         out[name] = settings.get(name)
     return out
@@ -28,7 +26,7 @@ class AutounitMiddleware:
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
 
-        self.settings = settings
+        settings = settings
 
         self.max_fixtures = settings.getint(
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
@@ -50,10 +48,9 @@ class AutounitMiddleware:
         return cls(crawler.settings)
 
     def process_spider_input(self, response, spider):
-        settings = spider.settings
         response.meta['_autounit'] = {
-            'request': parse_request(response.request, spider, self.settings),
-            'response': response_to_dict(response, self.settings),
+            'request': parse_request(response.request, spider),
+            'response': response_to_dict(response),
             'spider_args': {
                 k: v for k, v in spider.__dict__.items()
                 if k not in ('crawler', 'settings', 'start_urls')
@@ -69,7 +66,7 @@ class AutounitMiddleware:
             out.append(elem)
             processed_result.append({
                 'type': 'request' if isinstance(elem, Request) else 'item',
-                'data': parse_object(elem, spider, self.settings)
+                'data': parse_object(elem, spider)
             })
 
         input_data = response.meta.pop('_autounit')
