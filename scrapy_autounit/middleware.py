@@ -10,9 +10,15 @@ from .utils import (
     get_or_create_fixtures_dir,
     parse_request,
     parse_object,
-    write_test,
     get_project_dir,
 )
+
+
+def _copy_settings(settings):
+    out = {}
+    for name in settings.getlist('AUTOUNIT_INCLUDED_SETTINGS', []):
+        out[name] = settings.get(name)
+    return out
 
 
 class AutounitMiddleware:
@@ -20,7 +26,7 @@ class AutounitMiddleware:
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
 
-        self.settings = settings
+        settings = settings
 
         self.max_fixtures = settings.getint(
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
@@ -43,8 +49,8 @@ class AutounitMiddleware:
 
     def process_spider_input(self, response, spider):
         response.meta['_autounit'] = {
-            'request': parse_request(response.request, spider, self.settings),
-            'response': response_to_dict(response, self.settings),
+            'request': parse_request(response.request, spider),
+            'response': response_to_dict(response),
             'spider_args': {
                 k: v for k, v in spider.__dict__.items()
                 if k not in ('crawler', 'settings', 'start_urls')
@@ -53,13 +59,14 @@ class AutounitMiddleware:
         return None
 
     def process_spider_output(self, response, result, spider):
+        settings = spider.settings
         processed_result = []
         out = []
         for elem in result:
             out.append(elem)
             processed_result.append({
                 'type': 'request' if isinstance(elem, Request) else 'item',
-                'data': parse_object(elem, spider, self.settings)
+                'data': parse_object(elem, spider)
             })
 
         input_data = response.meta.pop('_autounit')
@@ -70,7 +77,8 @@ class AutounitMiddleware:
             'request': request,
             'response': input_data['response'],
             'result': processed_result,
-            'spider_args': input_data['spider_args']
+            'spider_args': input_data['spider_args'],
+            'settings': _copy_settings(settings),
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
