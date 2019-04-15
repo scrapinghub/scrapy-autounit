@@ -117,5 +117,9 @@ For security reasons, Autounit already excludes `Authorization` and `Proxy-Autho
 If you want to include `Authorization` or `Proxy-Authorization` headers in your fixtures, add one or both of them to this list.  
 `Default: []`
 
+**AUTOUNIT_INCLUDED_SETTINGS**
+Sets a list of settings names to be recorded in the generated test case.
+`Default: []`
+
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.

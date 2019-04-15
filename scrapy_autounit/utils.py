@@ -21,12 +21,6 @@ from scrapy.utils.conf import (
 )
 
 
-def merge_settings(project_settings, spider):
-    spider_cls = type(spider)
-    project_settings.setdict(spider_cls.custom_settings)
-    return project_settings
-
-
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
     if closest_cfg:
@@ -104,7 +98,7 @@ def unpickle_data(data):
     return pickle.loads(b64decode(data))
 
 
-def response_to_dict(response, settings):
+def response_to_dict(response):
     return {
         'url': response.url,
         'status': response.status,
@@ -125,31 +119,31 @@ def get_spider_class(spider_name, project_settings):
     return None
 
 
-def parse_object(_object, spider, settings):
+def parse_object(_object, spider):
     if isinstance(_object, Request):
-        return parse_request(_object, spider, settings)
+        return parse_request(_object, spider)
 
     if isinstance(_object, (dict, Item)):
         _object = _object.copy()
-        clean_item(_object, settings)
+        clean_item(_object, spider.settings)
 
     return _object
 
 
-def parse_request(request, spider, settings):
+def parse_request(request, spider):
     _request = request_to_dict(request, spider=spider)
     if not _request['callback']:
         _request['callback'] = 'parse'
 
-    clean_headers(_request['headers'], settings)
+    clean_headers(_request['headers'], spider.settings)
     _request['body'] = _request['body'].decode('utf-8')
 
     _meta = {}
     for key, value in _request.get('meta').items():
-        _meta[key] = parse_object(value, spider, settings)
+        _meta[key] = parse_object(value, spider)
     _request['meta'] = _meta
 
-    clean_request(_request, settings)
+    clean_request(_request, spider.settings)
 
     return _request
 
@@ -238,10 +232,12 @@ def test_generator(fixture_path):
     settings = get_project_settings()
 
     spider_cls = get_spider_class(spider_name, settings)
+    spider_cls.update_settings(settings)
+    for k, v in data.get('settings', {}).items():
+        settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
+    spider.settings = settings
     callback = getattr(spider, callback_name, None)
-
-    merge_settings(settings, spider)
 
     def test(self):
         fixture_objects = data['result']
@@ -280,7 +276,7 @@ def test_generator(fixture_path):
             else:
                 clean_item(fixture_data, settings)
 
-            _object = parse_object(_object, spider, settings)
+            _object = parse_object(_object, spider)
             self.assertEqual(fixture_data, _object, 'Not equal!')
 
     return test
