@@ -10,8 +10,8 @@ from .utils import (
     get_or_create_fixtures_dir,
     parse_request,
     parse_object,
-    write_test,
     get_project_dir,
+    get_middlewares,
 )
 
 
@@ -42,6 +42,7 @@ class AutounitMiddleware:
         return cls(crawler.settings)
 
     def process_spider_input(self, response, spider):
+        self.middlewares = get_middlewares(self.settings, spider.crawler)
         response.meta['_autounit'] = {
             'request': parse_request(response.request, spider, self.settings),
             'response': response_to_dict(response, self.settings),
@@ -70,7 +71,8 @@ class AutounitMiddleware:
             'request': request,
             'response': input_data['response'],
             'result': processed_result,
-            'spider_args': input_data['spider_args']
+            'spider_args': input_data['spider_args'],
+            'middlewares': self.middlewares,
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)

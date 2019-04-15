@@ -8,12 +8,17 @@ from importlib import import_module
 from base64 import b64encode, b64decode
 
 from scrapy.item import Item
+from scrapy.exceptions import NotConfigured
 from scrapy.http import HtmlResponse, Request
 from scrapy.utils.reqser import request_to_dict
-from scrapy.utils.misc import walk_modules
 from scrapy.utils.spider import iter_spider_classes
 from scrapy.utils.project import get_project_settings
-from scrapy.utils.conf import init_env, closest_scrapy_cfg
+from scrapy.utils.misc import walk_modules, load_object, create_instance
+from scrapy.utils.conf import (
+    init_env,
+    closest_scrapy_cfg,
+    build_component_list,
+)
 
 
 def merge_settings(project_settings, spider):
@@ -37,6 +42,25 @@ def get_project_dir():
         return Path(module.__file__).parent.parent
     except ImportError:
         return None
+
+
+def get_middlewares(settings, crawler):
+    middlewares = []
+    autounit_mw_path = 'scrapy_autounit.AutounitMiddleware'
+
+    full_list = build_component_list(
+        settings.getwithbase('SPIDER_MIDDLEWARES'))
+    start = full_list.index(autounit_mw_path)
+
+    mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
+    for mw_path in mw_paths:
+        try:
+            mw_cls = load_object(mw_path)
+            mw = create_instance(mw_cls, settings, crawler)
+            middlewares.append(mw)
+        except NotConfigured:
+            continue
+    return middlewares
 
 
 def get_or_create_fixtures_dir(base_path, spider_name, callback_name):
@@ -233,11 +257,23 @@ def test_generator(fixture_path):
             **data['response']
         )
 
-        callback_response = callback(response)
-        if isinstance(callback_response, (Item, Request, dict)):
-            callback_response = [callback_response]
+        middlewares = data['middlewares']
 
-        for index, _object in enumerate(callback_response):
+        for mw in middlewares:
+            if hasattr(mw, 'process_spider_input'):
+                mw.process_spider_input(response, spider)
+
+        result = callback(response)
+        middlewares.reverse()
+
+        for mw in middlewares:
+            if hasattr(mw, 'process_spider_output'):
+                result = mw.process_spider_output(response, result, spider)
+
+        if isinstance(result, (Item, Request, dict)):
+            result = [result]
+
+        for index, _object in enumerate(result):
             fixture_data = fixture_objects[index]['data']
             if fixture_objects[index].get('type') == 'request':
                 clean_request(fixture_data, settings)
