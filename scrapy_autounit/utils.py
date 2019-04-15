@@ -38,19 +38,19 @@ def get_project_dir():
         return None
 
 
-def get_middlewares(settings, crawler):
+def get_middlewares(spider):
     middlewares = []
     autounit_mw_path = 'scrapy_autounit.AutounitMiddleware'
 
     full_list = build_component_list(
-        settings.getwithbase('SPIDER_MIDDLEWARES'))
+        spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
 
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
     for mw_path in mw_paths:
         try:
             mw_cls = load_object(mw_path)
-            mw = create_instance(mw_cls, settings, crawler)
+            mw = create_instance(mw_cls, spider.settings, spider.crawler)
             middlewares.append(mw)
         except NotConfigured:
             continue

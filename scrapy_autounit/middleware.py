@@ -27,8 +27,6 @@ class AutounitMiddleware:
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
 
-        settings = settings
-
         self.max_fixtures = settings.getint(
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
             default=10
@@ -49,14 +47,14 @@ class AutounitMiddleware:
         return cls(crawler.settings)
 
     def process_spider_input(self, response, spider):
-        self.middlewares = get_middlewares(self.settings, spider.crawler)
         response.meta['_autounit'] = {
             'request': parse_request(response.request, spider),
             'response': response_to_dict(response),
             'spider_args': {
                 k: v for k, v in spider.__dict__.items()
                 if k not in ('crawler', 'settings', 'start_urls')
-            }
+            },
+            'middlewares': get_middlewares(spider),
         }
         return None
 
@@ -81,7 +79,7 @@ class AutounitMiddleware:
             'result': processed_result,
             'spider_args': input_data['spider_args'],
             'settings': _copy_settings(settings),
-            'middlewares': self.middlewares,
+            'middlewares': input_data['middlewares'],
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
