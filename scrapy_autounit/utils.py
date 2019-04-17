@@ -7,7 +7,9 @@ from itertools import islice
 from importlib import import_module
 from base64 import b64encode, b64decode
 
+from scrapy import signals
 from scrapy.item import Item
+from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
 from scrapy.http import HtmlResponse, Request
 from scrapy.utils.reqser import request_to_dict
@@ -39,22 +41,14 @@ def get_project_dir():
 
 
 def get_middlewares(spider):
-    middlewares = []
     autounit_mw_path = 'scrapy_autounit.AutounitMiddleware'
 
     full_list = build_component_list(
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
-
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
-    for mw_path in mw_paths:
-        try:
-            mw_cls = load_object(mw_path)
-            mw = create_instance(mw_cls, spider.settings, spider.crawler)
-            middlewares.append(mw)
-        except NotConfigured:
-            continue
-    return middlewares
+
+    return mw_paths
 
 
 def get_or_create_fixtures_dir(base_path, spider_name, callback_name):
@@ -238,6 +232,7 @@ def test_generator(fixture_path):
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
     callback = getattr(spider, callback_name, None)
+    crawler = Crawler(spider_cls, settings)
 
     def test(self):
         fixture_objects = data['result']
@@ -253,7 +248,21 @@ def test_generator(fixture_path):
             **data['response']
         )
 
-        middlewares = data['middlewares']
+        middlewares = []
+        middleware_paths = data['middlewares']
+        for mw_path in middleware_paths:
+            try:
+                mw_cls = load_object(mw_path)
+                mw = create_instance(mw_cls, settings, crawler)
+                middlewares.append(mw)
+            except NotConfigured:
+                continue
+            middlewares.append(mw)
+
+        crawler.signals.send_catch_log(
+            signal=signals.spider_opened,
+            spider=spider
+        )
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
