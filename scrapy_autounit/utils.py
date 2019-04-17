@@ -5,7 +5,6 @@ import pickle
 from pathlib import Path
 from itertools import islice
 from importlib import import_module
-from base64 import b64encode, b64decode
 
 from scrapy import signals
 from scrapy.item import Item
@@ -68,28 +67,28 @@ def create_tests_tree(base_path, spider_name, callback_name):
 
 
 def add_sample(index, fixtures_dir, data):
-    filename = 'fixture%s.txt' % str(index)
+    filename = 'fixture%s.bin' % str(index)
     path = fixtures_dir / filename
     data = compress_data(pickle_data(data))
-    with open(path, 'w') as outfile:
-        outfile.write(data.decode('utf-8'))
+    with open(path, 'wb') as outfile:
+        outfile.write(data)
     write_test(path)
 
 
 def compress_data(data):
-    return b64encode(zlib.compress(data, level=9))
+    return zlib.compress(data, level=9)
 
 
 def decompress_data(data):
-    return zlib.decompress(b64decode(data))
+    return zlib.decompress(data)
 
 
 def pickle_data(data):
-    return b64encode(pickle.dumps(data))
+    return pickle.dumps(data)
 
 
 def unpickle_data(data):
-    return pickle.loads(b64decode(data))
+    return pickle.loads(data)
 
 
 def response_to_dict(response):
@@ -195,7 +194,7 @@ class AutoUnit(unittest.TestCase):
             '../../../../fixtures' /
             '{spider_name}' /
             '{callback_name}' /
-            '{fixture_name}.txt'
+            '{fixture_name}.bin'
         )
         test = test_generator(file_path.resolve())
         test(self)
@@ -215,7 +214,7 @@ if __name__ == '__main__':
 
 
 def test_generator(fixture_path):
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path, 'rb') as f:
         data = f.read()
 
     data = unpickle_data(decompress_data(data))
