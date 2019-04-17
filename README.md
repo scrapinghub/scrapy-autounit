@@ -48,11 +48,10 @@ pip install scrapy_autounit
 
 ## Usage
 
-First, add the spider middleware to the end of your `SPIDER_MIDDLEWARES` setting.  
-For now, it should be the last spider middleware in your list by numeric order (better middleware support coming soon):
+First, add the spider middleware to your `SPIDER_MIDDLEWARES` setting (no specific order required):  
 ```python
 SPIDER_MIDDLEWARES = {
-    'scrapy_autounit.AutounitMiddleware': 900
+    'scrapy_autounit.AutounitMiddleware': 950
 }
 ```
 Then make sure you enable Scrapy Autounit:
