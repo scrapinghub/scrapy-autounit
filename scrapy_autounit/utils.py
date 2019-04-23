@@ -95,7 +95,7 @@ def response_to_dict(response):
     return {
         'url': response.url,
         'status': response.status,
-        'body': response.body.decode('utf-8', 'replace'),
+        'body': response.body,
         'headers': response.headers,
         'flags': response.flags
     }
@@ -129,7 +129,6 @@ def parse_request(request, spider):
         _request['callback'] = 'parse'
 
     clean_headers(_request['headers'], spider.settings)
-    _request['body'] = _request['body'].decode('utf-8')
 
     _meta = {}
     for key, value in _request.get('meta').items():
