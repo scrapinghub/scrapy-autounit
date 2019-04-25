@@ -97,7 +97,8 @@ def response_to_dict(response):
         'status': response.status,
         'body': response.body,
         'headers': response.headers,
-        'flags': response.flags
+        'flags': response.flags,
+        'encoding': response.encoding,
     }
 
 
@@ -235,11 +236,7 @@ def test_generator(fixture_path):
         fixture_objects = data['result']
 
         request = request_from_dict(data['request'], spider)
-        response = HtmlResponse(
-            encoding='utf-8',
-            request=request,
-            **data['response']
-        )
+        response = HtmlResponse(request=request, **data['response'])
 
         middlewares = []
         middleware_paths = data['middlewares']
