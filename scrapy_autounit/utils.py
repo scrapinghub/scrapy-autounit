@@ -11,7 +11,7 @@ from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
 from scrapy.http import HtmlResponse, Request
-from scrapy.utils.reqser import request_to_dict
+from scrapy.utils.reqser import request_to_dict, request_from_dict
 from scrapy.utils.spider import iter_spider_classes
 from scrapy.utils.project import get_project_settings
 from scrapy.utils.misc import walk_modules, load_object, create_instance
@@ -229,17 +229,12 @@ def test_generator(fixture_path):
         settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
-    callback = getattr(spider, callback_name, None)
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
         fixture_objects = data['result']
 
-        data['request'].pop('_class', None)
-        data['request'].pop('_encoding', None)
-        data['request'].pop('callback', None)
-
-        request = Request(callback=callback, **data['request'])
+        request = request_from_dict(data['request'], spider)
         response = HtmlResponse(
             encoding='utf-8',
             request=request,
@@ -266,7 +261,7 @@ def test_generator(fixture_path):
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
-        result = callback(response)
+        result = request.callback(response) or []
         middlewares.reverse()
 
         for mw in middlewares:
