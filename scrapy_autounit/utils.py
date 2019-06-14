@@ -50,29 +50,28 @@ def get_middlewares(spider):
     return mw_paths
 
 
-def get_or_create_fixtures_dir(base_path, spider_name, callback_name):
-    create_tests_tree(base_path, spider_name, callback_name)
-    fixtures_dir = base_path / 'fixtures' / spider_name / callback_name
-    Path.mkdir(fixtures_dir, parents=True, exist_ok=True)
-    return fixtures_dir
+def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
+    components = [base_path, 'tests', spider_name]
+    if extra:
+        components.append(extra)
+    components.append(callback_name)
+    test_dir = None
+    for component in components:
+        test_dir = test_dir / component if test_dir else component
+        test_dir.mkdir(parents=True, exist_ok=True)
+        (test_dir / '__init__.py').touch()
+    test_name = '__'.join(components[2:])
+    return test_dir, test_name
 
 
-def create_tests_tree(base_path, spider_name, callback_name):
-    tests_dir = base_path / 'tests' / spider_name / callback_name
-    Path.mkdir(tests_dir, parents=True, exist_ok=True)
-    (base_path / '__init__.py').touch()
-    (base_path / 'tests' / '__init__.py').touch()
-    (base_path / 'tests' / spider_name / '__init__.py').touch()
-    (base_path / 'tests' / spider_name / callback_name / '__init__.py').touch()
-
-
-def add_sample(index, fixtures_dir, data):
-    filename = 'fixture%s.bin' % str(index)
-    path = fixtures_dir / filename
+def add_sample(index, test_dir, test_name, data):
+    fixture_name = 'fixture%s' % str(index)
+    filename = fixture_name + '.bin'
+    path = test_dir / filename
     data = compress_data(pickle_data(data))
     with open(path, 'wb') as outfile:
         outfile.write(data)
-    write_test(path)
+    write_test(test_dir, test_name, fixture_name)
 
 
 def compress_data(data):
@@ -170,16 +169,8 @@ def get_valid_identifier(name):
     return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
 
 
-def write_test(fixture_path):
-    fixture_name = fixture_path.stem
-    callback_path = fixture_path.parent
-    spider_path = callback_path.parent
-    base_path = spider_path.parent.parent
-
-    test_path = (
-        base_path / 'tests' / spider_path.name /
-        callback_path.name / f'test_{fixture_name}.py'
-    )
+def write_test(path, test_name, fixture_name):
+    test_path = path / f'test_{fixture_name}.py'
 
     test_code = '''import unittest
 from pathlib import Path
@@ -187,14 +178,10 @@ from scrapy_autounit.utils import test_generator
 
 
 class AutoUnit(unittest.TestCase):
-    def test_{fn_spider_name}_{callback_name}_{fixture_name}(self):
+    def test__{test_name}__{fixture_name}(self):
         self.maxDiff = None
         file_path = (
-            Path(__file__) /
-            '../../../../fixtures' /
-            '{spider_name}' /
-            '{callback_name}' /
-            '{fixture_name}.bin'
+            Path(__file__).parent / '{fixture_name}.bin'
         )
         test = test_generator(file_path.resolve())
         test(self)
@@ -203,10 +190,8 @@ class AutoUnit(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
 '''.format(
+        test_name=test_name,
         fixture_name=fixture_name,
-        fn_spider_name=get_valid_identifier(spider_path.name),
-        spider_name=spider_path.name,
-        callback_name=callback_path.name
     )
 
     with open(test_path, 'w') as f:

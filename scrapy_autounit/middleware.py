@@ -7,7 +7,7 @@ from scrapy.exceptions import NotConfigured
 from .utils import (
     add_sample,
     response_to_dict,
-    get_or_create_fixtures_dir,
+    get_or_create_test_dir,
     parse_request,
     parse_object,
     get_project_dir,
@@ -85,17 +85,18 @@ class AutounitMiddleware:
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
         self.fixture_counters[callback_name] += 1
 
-        fixtures_dir = get_or_create_fixtures_dir(
+        test_dir, test_name = get_or_create_test_dir(
             self.base_path,
             spider.name,
-            callback_name
+            callback_name,
+            settings.get('AUTOUNIT_EXTRA_PATH'),
         )
 
         if callback_counter < self.max_fixtures:
-            add_sample(callback_counter + 1, fixtures_dir, data)
+            add_sample(callback_counter + 1, test_dir, test_name, data)
         else:
             r = random.randint(0, callback_counter)
             if r < self.max_fixtures:
-                add_sample(r + 1, fixtures_dir, data)
+                add_sample(r + 1, test_dir, test_name, data)
 
         return out
