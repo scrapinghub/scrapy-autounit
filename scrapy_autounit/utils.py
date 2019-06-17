@@ -50,16 +50,26 @@ def get_middlewares(spider):
     return mw_paths
 
 
+def create_dir(path, parents=False, exist_ok=False):
+    try:
+        Path.mkdir(path, parents=parents)
+    except OSError:
+        if exist_ok:
+            pass
+        else:
+            raise
+
+
 def get_or_create_fixtures_dir(base_path, spider_name, callback_name):
     create_tests_tree(base_path, spider_name, callback_name)
     fixtures_dir = base_path / 'fixtures' / spider_name / callback_name
-    Path.mkdir(fixtures_dir, parents=True, exist_ok=True)
+    create_dir(fixtures_dir, parents=True, exist_ok=True)
     return fixtures_dir
 
 
 def create_tests_tree(base_path, spider_name, callback_name):
     tests_dir = base_path / 'tests' / spider_name / callback_name
-    Path.mkdir(tests_dir, parents=True, exist_ok=True)
+    create_dir(tests_dir, parents=True, exist_ok=True)
     (base_path / '__init__.py').touch()
     (base_path / 'tests' / '__init__.py').touch()
     (base_path / 'tests' / spider_name / '__init__.py').touch()
@@ -70,13 +80,13 @@ def add_sample(index, fixtures_dir, data):
     filename = 'fixture%s.bin' % str(index)
     path = fixtures_dir / filename
     data = compress_data(pickle_data(data))
-    with open(path, 'wb') as outfile:
+    with open(str(path), 'wb') as outfile:
         outfile.write(data)
     write_test(path)
 
 
 def compress_data(data):
-    return zlib.compress(data, level=9)
+    return zlib.compress(data)
 
 
 def decompress_data(data):
@@ -178,7 +188,7 @@ def write_test(fixture_path):
 
     test_path = (
         base_path / 'tests' / spider_path.name /
-        callback_path.name / f'test_{fixture_name}.py'
+        callback_path.name / Path('test_%s.py' % (fixture_name))
     )
 
     test_code = '''import unittest
@@ -209,17 +219,16 @@ if __name__ == '__main__':
         callback_name=callback_path.name
     )
 
-    with open(test_path, 'w') as f:
+    with open(str(test_path), 'w') as f:
         f.write(test_code)
 
 
 def test_generator(fixture_path):
-    with open(fixture_path, 'rb') as f:
+    with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
     data = unpickle_data(decompress_data(data))
 
-    callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
 
     settings = get_project_settings()
