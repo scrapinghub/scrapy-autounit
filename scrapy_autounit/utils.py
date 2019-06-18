@@ -50,6 +50,16 @@ def get_middlewares(spider):
     return mw_paths
 
 
+def create_dir(path, parents=False, exist_ok=False):
+    try:
+        Path.mkdir(path, parents=parents)
+    except OSError:
+        if exist_ok:
+            pass
+        else:
+            raise
+
+
 def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
     components = [base_path, 'tests', spider_name]
     if extra:
@@ -69,13 +79,13 @@ def add_sample(index, test_dir, test_name, data):
     filename = fixture_name + '.bin'
     path = test_dir / filename
     data = compress_data(pickle_data(data))
-    with open(path, 'wb') as outfile:
+    with open(str(path), 'wb') as outfile:
         outfile.write(data)
     write_test(test_dir, test_name, fixture_name)
 
 
 def compress_data(data):
-    return zlib.compress(data, level=9)
+    return zlib.compress(data)
 
 
 def decompress_data(data):
@@ -170,7 +180,7 @@ def get_valid_identifier(name):
 
 
 def write_test(path, test_name, fixture_name):
-    test_path = path / f'test_{fixture_name}.py'
+    test_path = path / ('test_%s.py' % (fixture_name))
 
     test_code = '''import unittest
 from pathlib import Path
@@ -194,17 +204,16 @@ if __name__ == '__main__':
         fixture_name=fixture_name,
     )
 
-    with open(test_path, 'w') as f:
+    with open(str(test_path), 'w') as f:
         f.write(test_code)
 
 
 def test_generator(fixture_path):
-    with open(fixture_path, 'rb') as f:
+    with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
     data = unpickle_data(decompress_data(data))
 
-    callback_name = fixture_path.parent.name
     spider_name = fixture_path.parent.parent.name
 
     settings = get_project_settings()

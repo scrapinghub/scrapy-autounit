@@ -12,6 +12,7 @@ from .utils import (
     parse_object,
     get_project_dir,
     get_middlewares,
+    create_dir,
 )
 
 
@@ -38,7 +39,7 @@ class AutounitMiddleware:
             'AUTOUNIT_BASE_PATH',
             default=get_project_dir() / 'autounit'
         ))
-        Path.mkdir(self.base_path, exist_ok=True)
+        create_dir(self.base_path, exist_ok=True)
 
         self.fixture_counters = {}
 
