@@ -111,7 +111,14 @@ class CaseSpider(object):
         process_error('Unit tests failed!', result)
         err = result.stderr.decode('utf-8')
         if 'Ran 1 test' not in err:
-            raise AssertionError('No tests generated/read!')
+            def itertree():
+                for root, dirs, files in os.walk(self.dir.name):
+                    for f in files:
+                        yield os.path.join(root, f)
+            raise AssertionError(
+                'No tests generated/read!\nProject dir:\n{}'.format(
+                    '\n'.join(itertree())
+                ))
 
 
 class TestRecording(unittest.TestCase):
