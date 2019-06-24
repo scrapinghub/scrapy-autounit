@@ -10,34 +10,29 @@ The test fixtures are generated from the items and requests that your spider yie
 Scrapy Autounit generates fixtures and tests per spider and callback under the Scrapy project root directory.  
 Here is an example of the directory tree of your project once the tests are created:  
 ```
-└── my_project
-    ├── autounit
-    │   ├── __init__.py
-    │   ├── fixtures
-    │   │   └── my_spider
-    │   │       └── my_callback
-    │   │           ├── fixture1.txt
-    │   │           ├── fixture2.txt
-    │   │           ├── ...
-    │   └── tests
-    │       ├── __init__.py
-    │       └── my_spider
-    │           ├── __init__.py
-    │           └── my_callback
-    │               ├── __init__.py
-    │               ├── test_fixture1.py
-    │               ├── test_fixture2.py
-    │               ├── ...
-    ├── scrapy.cfg
-    └── my_project
-        ├── __init__.py
-        ├── items.py
-        ├── middlewares.py
-        ├── pipelines.py
-        ├── settings.py
-        └── spiders
-            ├── __init__.py
-            └── my_spider.py
+my_project
+├── autounit
+│   ├── __init__.py
+│   └── tests
+│       ├── __init__.py
+│       └── my_spider
+│           ├── __init__.py
+│           └── my_callback
+│               ├── __init__.py
+│               ├── fixture1.bin
+│               ├── fixture2.bin
+│               ├── test_fixture1.py
+│               ├── test_fixture2.py
+├── my_project
+│   ├── __init__.py
+│   ├── items.py
+│   ├── middlewares.py
+│   ├── pipelines.py
+│   ├── settings.py
+│   └── spiders
+│       ├── __init__.py
+│       └── my_spider.py
+└── scrapy.cfg
 ```
 
 ## Installation
@@ -48,39 +43,51 @@ pip install scrapy_autounit
 
 ## Usage
 
-First, add the spider middleware to your `SPIDER_MIDDLEWARES` setting (no specific order required):  
+Add the spider middleware to your `SPIDER_MIDDLEWARES` setting (no specific order required):  
 ```python
 SPIDER_MIDDLEWARES = {
     'scrapy_autounit.AutounitMiddleware': 950
 }
 ```
-Then make sure you enable Scrapy Autounit:
+
+### Generating tests
+Make sure you enable Scrapy Autounit in your settings:
 ```python
 AUTOUNIT_ENABLED = True
 ```
-**NOTE:** Make sure you turn AUTOUNIT_ENABLED on only when you are generating/updating fixtures/tests, otherwise it should be off.
-
-### Generating tests
 To generate your fixtures and tests just run your spiders as usual, Scrapy Autounit will generate them for you.  
+```
+$ scrapy crawl my_spider
+```
+When the spider finishes, a directory `autounit` is created in your project root dir, containing all the generated tests/fixtures for the spider you just ran (see the directory tree example above).  
 If you want to **update** your tests and fixtures you only need to run your spiders again.
+
 ### Running tests
 To run your tests you can use `unittest` regular commands.
+
 ###### Test all
 ```
-python -m unittest
+$ python -m unittest
 ```
 ###### Test a specific spider
 ```
-python -m unittest discover -s autounit.tests.my_spider
+$ python -m unittest discover -s autounit.tests.my_spider
 ```
 ###### Test a specific callback
 ```
-python -m unittest discover -s autounit.tests.my_spider.my_callback
+$ python -m unittest discover -s autounit.tests.my_spider.my_callback
 ```
 ###### Test a specific fixture
 ```
-python -m unittest autounit.tests.my_spider.my_callback.test_fixture2
+$ python -m unittest autounit.tests.my_spider.my_callback.test_fixture2
 ```
+
+## Caveats
+- Keep in mind that as long as `AUTOUNIT_ENABLED` is on, each time you run a spider tests/fixtures are going to be generated for its callbacks.  
+This means that if you have your tests/fixtures ready to go, this setting should be off to prevent undesired overwrites.  
+Each time you want to regenerate your tests (e.g.: due to changes in your spiders), you can turn this on again and run your spiders as usual.  
+
+- Autounit uses an internal `_autounit` key in requests' meta dictionaries. Avoid using/overriding this key in your spiders when adding data to meta to prevent unexpected behaviours.  
 
 ## Settings
 
@@ -126,7 +133,3 @@ This is an extra string element to add to the test path and name between the spi
 
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.
-
-## Caveats
-
-- Autounit uses an internal `_autounit` key in requests' meta dictionaries. Avoid using/overriding this key in your spiders when adding data to meta to prevent unexpected behaviours.
