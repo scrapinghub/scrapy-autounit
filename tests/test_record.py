@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import subprocess
 import os
+import shutil
 
 
 SPIDER_TEMPLATE = '''
@@ -25,6 +26,16 @@ class MySpider(scrapy.Spider):
 '''
 
 
+def run(*pargs, **kwargs):
+    proc = subprocess.Popen(*pargs, **kwargs)
+    proc.wait()
+    return {
+        'returncode': proc.returncode,
+        'stdout': proc.stdout.read(),
+        'stderr': proc.stderr.read(),
+    }
+
+
 def indent(string):
     return '\n'.join('    ' + s for s in string.splitlines())
 
@@ -33,27 +44,21 @@ def process_error(message, result):
     raise AssertionError(
         '{}\nSTDOUT--\n{}\nSTDERR--\n{}'.format(
             message,
-            indent(result.stdout.decode('utf-8')),
-            indent(result.stderr.decode('utf-8')),
+            indent(result['stdout'].decode('utf-8')),
+            indent(result['stderr'].decode('utf-8')),
         ))
 
 
 def check_process(message, result):
-    if result.returncode == 0:
+    if result['returncode'] == 0:
         return
     process_error(message, result)
-    raise AssertionError(
-        '{}\nSTDOUT--\n{}\nSTDERR--\n{}'.format(
-            message,
-            indent(result.stdout.decode('utf-8')),
-            indent(result.stderr.decode('utf-8')),
-        ))
 
 
 class CaseSpider(object):
     def __init__(self):
-        self.dir = tempfile.TemporaryDirectory()
-        self.proj_dir = os.path.join(self.dir.name, 'myproject')
+        self.dir = tempfile.mkdtemp()
+        self.proj_dir = os.path.join(self.dir, 'myproject')
         os.mkdir(self.proj_dir)
         with open(os.path.join(self.proj_dir, '__init__.py'), 'w'):
             pass
@@ -63,11 +68,10 @@ class CaseSpider(object):
         self._parse = None
 
     def __enter__(self):
-        self.dir.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.dir.__exit__(exc_type, exc_value, traceback)
+        shutil.rmtree(self.dir)
 
     def start_requests(self, string):
         self._start_requests = string
@@ -88,7 +92,7 @@ class CaseSpider(object):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.dir.name  # doesn't work if == cwd
+        env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         command_args = [
             'scrapy', 'crawl', 'myspider',
@@ -100,7 +104,7 @@ class CaseSpider(object):
         for k, v in (settings or {}).items():
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
-        result = subprocess.run(
+        result = run(
             command_args,
             env=env,
             cwd='/',
@@ -108,7 +112,7 @@ class CaseSpider(object):
             stderr=subprocess.PIPE
         )
         check_process('Running spider failed!', result)
-        if not os.path.exists(os.path.join(self.dir.name, 'autounit')):
+        if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
@@ -116,20 +120,20 @@ class CaseSpider(object):
             raise AssertionError()
         env = os.environ.copy()
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
-        result = subprocess.run(
+        result = run(
             [
                 'python', '-m', 'unittest', 'discover', '-v'
             ],
-            cwd=self.dir.name,
+            cwd=self.dir,
             env=env,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
         check_process('Unit tests failed!', result)
-        err = result.stderr.decode('utf-8')
+        err = result['stderr'].decode('utf-8')
         if 'Ran 1 test' not in err:
             def itertree():
-                for root, dirs, files in os.walk(self.dir.name):
+                for root, dirs, files in os.walk(self.dir):
                     for f in files:
                         yield os.path.join(root, f)
             raise AssertionError(
