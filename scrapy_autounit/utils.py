@@ -68,7 +68,7 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
     test_dir = None
     for component in components:
         test_dir = test_dir / component if test_dir else component
-        test_dir.mkdir(parents=True, exist_ok=True)
+        create_dir(test_dir, parents=True, exist_ok=True)
         (test_dir / '__init__.py').touch()
     test_name = '__'.join(components[2:])
     return test_dir, test_name
