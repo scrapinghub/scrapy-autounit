@@ -142,7 +142,8 @@ def parse_request(request, spider):
 
     _meta = {}
     for key, value in _request.get('meta').items():
-        _meta[key] = parse_object(value, spider)
+        if key != '_autounit':
+            _meta[key] = parse_object(value, spider)
     _request['meta'] = _meta
 
     clean_request(_request, spider.settings)

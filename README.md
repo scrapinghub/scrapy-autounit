@@ -117,12 +117,16 @@ If you want to include `Authorization` or `Proxy-Authorization` headers in your 
 `Default: []`
 
 **AUTOUNIT_INCLUDED_SETTINGS**
-Sets a list of settings names to be recorded in the generated test case.
+Sets a list of settings names to be recorded in the generated test case.  
 `Default: []`
 
 **AUTOUNIT_EXTRA_PATH**
-This is an extra string element to add to the test path and name between the spider name and callback name. You can use this to separate tests from the same spider with different configurations.
+This is an extra string element to add to the test path and name between the spider name and callback name. You can use this to separate tests from the same spider with different configurations.  
 `Default: None`
 
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.
+
+## Caveats
+
+- Autounit uses an internal `_autounit` key in requests' meta dictionaries. Avoid using/overriding this key in your spiders when adding data to meta to prevent unexpected behaviours.
