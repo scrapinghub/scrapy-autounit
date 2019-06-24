@@ -30,8 +30,18 @@ def indent(string):
 
 
 def process_error(message, result):
+    raise AssertionError(
+        '{}\nSTDOUT--\n{}\nSTDERR--\n{}'.format(
+            message,
+            indent(result.stdout.decode('utf-8')),
+            indent(result.stderr.decode('utf-8')),
+        ))
+
+
+def check_process(message, result):
     if result.returncode == 0:
         return
+    process_error(message, result)
     raise AssertionError(
         '{}\nSTDOUT--\n{}\nSTDERR--\n{}'.format(
             message,
@@ -80,19 +90,26 @@ class CaseSpider(object):
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir.name  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
-        command_args = []
+        command_args = [
+            'scrapy', 'crawl', 'myspider',
+            '-s', 'AUTOUNIT_ENABLED=1',
+        ]
         for k, v in (args or {}).items():
             command_args.append('-a')
             command_args.append('{}={}'.format(k, v))
         for k, v in (settings or {}).items():
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
-        result = subprocess.run([
-            'scrapy', 'crawl', 'myspider',
-            '-s', 'AUTOUNIT_ENABLED=1',
-            *command_args
-        ], env=env, cwd='/', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process_error('Running spider failed!', result)
+        result = subprocess.run(
+            command_args,
+            env=env,
+            cwd='/',
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        check_process('Running spider failed!', result)
+        if not os.path.exists(os.path.join(self.dir.name, 'autounit')):
+            process_error('No autounit tests recorded!', result)
 
     def test(self):
         if self._start_requests is None or self._parse is None:
@@ -108,7 +125,7 @@ class CaseSpider(object):
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
-        process_error('Unit tests failed!', result)
+        check_process('Unit tests failed!', result)
         err = result.stderr.decode('utf-8')
         if 'Ran 1 test' not in err:
             def itertree():
@@ -116,7 +133,7 @@ class CaseSpider(object):
                     for f in files:
                         yield os.path.join(root, f)
             raise AssertionError(
-                'No tests generated/read!\nProject dir:\n{}'.format(
+                'No tests run!\nProject dir:\n{}'.format(
                     '\n'.join(itertree())
                 ))
 
