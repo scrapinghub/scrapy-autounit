@@ -27,12 +27,16 @@ class MySpider(scrapy.Spider):
 
 
 def run(*pargs, **kwargs):
+    kwargs.pop('stdout', None)  # DEBUG
+    kwargs.pop('stderr', None)  # DEBUG
     proc = subprocess.Popen(*pargs, **kwargs)
     proc.wait()
     return {
         'returncode': proc.returncode,
-        'stdout': proc.stdout.read(),
-        'stderr': proc.stderr.read(),
+        # 'stdout': proc.stdout.read(),
+        # 'stderr': proc.stderr.read(),
+        'stdout': b'',  # DEBUG
+        'stderr': b'',  # DEBUG
     }
 
 
