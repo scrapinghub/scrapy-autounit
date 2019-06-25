@@ -54,9 +54,7 @@ def create_dir(path, parents=False, exist_ok=False):
     try:
         Path.mkdir(path, parents=parents)
     except OSError:
-        if exist_ok:
-            pass
-        else:
+        if not exist_ok:
             raise
 
 
