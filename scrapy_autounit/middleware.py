@@ -75,6 +75,7 @@ class AutounitMiddleware:
         callback_name = request['callback']
 
         data = {
+            'spider_name': spider.name,
             'request': request,
             'response': input_data['response'],
             'result': processed_result,

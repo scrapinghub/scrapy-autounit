@@ -13,7 +13,7 @@ build: false
 
 install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - pip install flake8 tox
+  - pip install tox
 
 test_script:
   - "tox -e %TOX_ENV%"

@@ -215,7 +215,9 @@ def test_generator(fixture_path):
 
     data = unpickle_data(decompress_data(data))
 
-    spider_name = fixture_path.parent.parent.name
+    spider_name = data.get('spider_name')
+    if not spider_name:  # legacy tests
+        spider_name = fixture_path.parent.parent.name
 
     settings = get_project_settings()
 
