@@ -91,7 +91,7 @@ def decompress_data(data):
 
 
 def pickle_data(data):
-    return pickle.dumps(data)
+    return pickle.dumps(data, protocol=2)
 
 
 def unpickle_data(data):
