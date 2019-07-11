@@ -178,6 +178,18 @@ def get_valid_identifier(name):
     return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
 
 
+def get_spider_attr(spider, settings):
+    _exclude_attr = settings.get("AUTOUNIT_EXCLUDED_ATTRIBUTE", default=[])
+    if not isinstance(_exclude_attr, (list, tuple)):
+        _exclude_attr = [_exclude_attr]
+    spider_attr = spider.__dict__.copy()
+    spider_attr = {k: v for k, v in spider_attr.items()
+                   if (k not in ['settings', 'crawler']
+                       and not any([re.findall(_pattern, k)
+                                    for _pattern in _exclude_attr]))}
+    return spider_attr
+
+
 def write_test(path, test_name, fixture_name):
     test_path = path / ('test_%s.py' % (fixture_name))
 
