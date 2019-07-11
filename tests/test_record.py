@@ -5,6 +5,7 @@ import os
 import shutil
 import re
 
+
 SPIDER_TEMPLATE = '''
 import scrapy
 
@@ -64,6 +65,7 @@ class CaseSpider(object):
             pass
         with open(os.path.join(self.proj_dir, 'settings.py'), 'w') as dest:
             dest.write('SPIDER_MODULES = ["myproject"]\n')
+        self._write_mw()
         self._start_requests = None
         self._parse = None
 
@@ -79,7 +81,6 @@ class CaseSpider(object):
 
     def parse(self, string):
         self._parse = string
-        self.flag = True
         self._write_spider()
 
     def _write_spider(self):
@@ -90,8 +91,17 @@ class CaseSpider(object):
             )
             dest.write(self.spider_text)
 
+    def _write_mw(self):
+        mw_folder = os.path.join(self.proj_dir, 'scrapy_autounit')
+        if not os.path.exists(mw_folder):
+            os.mkdir(mw_folder)
+        for item in os.listdir('scrapy_autounit'):
+            if item.endswith('.py'):
+                s = os.path.join('scrapy_autounit', item)
+                d = os.path.join(mw_folder, item)
+                shutil.copyfile(s, d)
+
     def record(self, args=None, settings=None):
-        print(self.dir)
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -112,14 +122,13 @@ class CaseSpider(object):
             env=env,
             cwd='/',
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
         check_process('Running spider failed!', result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
-        print(self.dir)
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -135,10 +144,11 @@ class CaseSpider(object):
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
-        print('ERROR MESSAGE: {}'.format(err))
-        num_errors = re.findall(r'Ran \d+ tests', err)
-        print(num_errors)
-        if not num_errors:
+        num_errors = re.findall(r'Ran (\d+) tests', err)
+        # print(num_errors)
+        # print(result)
+        if (not num_errors
+            or (isinstance(num_errors, list) and int(num_errors[0]) > 0)):
             def itertree():
                 for root, dirs, files in os.walk(self.dir):
                     for f in files:
