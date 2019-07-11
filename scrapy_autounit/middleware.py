@@ -13,6 +13,7 @@ from .utils import (
     get_project_dir,
     get_middlewares,
     create_dir,
+    get_spider_attr,
 )
 
 
@@ -73,11 +74,14 @@ class AutounitMiddleware:
         input_data = response.meta.pop('_autounit')
         request = input_data['request']
         callback_name = request['callback']
+        spider_attr = get_spider_attr(spider.crawler.signals.sender.spider,
+                                      settings)
 
         data = {
             'spider_name': spider.name,
             'request': request,
             'response': input_data['response'],
+            'spider_attr': spider_attr,
             'result': processed_result,
             'spider_args': input_data['spider_args'],
             'settings': _copy_settings(settings),
