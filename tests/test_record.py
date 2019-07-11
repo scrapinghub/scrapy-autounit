@@ -3,7 +3,7 @@ import tempfile
 import subprocess
 import os
 import shutil
-from scrapy_autounit.middleware import AutounitMiddleware
+import re
 
 SPIDER_TEMPLATE = '''
 import scrapy
@@ -91,12 +91,12 @@ class CaseSpider(object):
             dest.write(self.spider_text)
 
     def record(self, args=None, settings=None):
+        print(self.dir)
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
-        print(env)
         command_args = [
             'scrapy', 'crawl', 'myspider',
             '-s', 'AUTOUNIT_ENABLED=1',
@@ -119,6 +119,7 @@ class CaseSpider(object):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
+        print(self.dir)
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -134,7 +135,10 @@ class CaseSpider(object):
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
-        if 'Ran 1 test' not in err:
+        print('ERROR MESSAGE: {}'.format(err))
+        num_errors = re.findall(r'Ran \d+ tests', err)
+        print(num_errors)
+        if not num_errors:
             def itertree():
                 for root, dirs, files in os.walk(self.dir):
                     for f in files:
