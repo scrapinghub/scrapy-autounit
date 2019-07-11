@@ -1,3 +1,4 @@
+import six
 import random
 from pathlib import Path
 
@@ -82,6 +83,7 @@ class AutounitMiddleware:
             'spider_args': input_data['spider_args'],
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],
+            'python_version': 2 if six.PY2 else 3,
         }
 
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
