@@ -3,7 +3,7 @@ import tempfile
 import subprocess
 import os
 import shutil
-
+from scrapy_autounit.middleware import AutounitMiddleware
 
 SPIDER_TEMPLATE = '''
 import scrapy
@@ -14,7 +14,7 @@ class MySpider(scrapy.Spider):
 
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
-            'scrapy_autounit.AutounitMiddleware': 950,
+            'scrapy_autounit.middleware.AutounitMiddleware': 950,
         }}
     )
 
@@ -79,14 +79,16 @@ class CaseSpider(object):
 
     def parse(self, string):
         self._parse = string
+        self.flag = True
         self._write_spider()
 
     def _write_spider(self):
         with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
-            dest.write(SPIDER_TEMPLATE.format(
+            self.spider_text = SPIDER_TEMPLATE.format(
                 start_requests=self._start_requests,
                 parse=self._parse
-            ))
+            )
+            dest.write(self.spider_text)
 
     def record(self, args=None, settings=None):
         if self._start_requests is None or self._parse is None:
@@ -94,6 +96,7 @@ class CaseSpider(object):
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
+        print(env)
         command_args = [
             'scrapy', 'crawl', 'myspider',
             '-s', 'AUTOUNIT_ENABLED=1',
@@ -160,3 +163,13 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.record(settings=dict(AUTOUNIT_EXTRA_PATH='abc'))
             spider.test()
+
+    def test_spider_attributes(self):
+        with CaseSpider() as spider:
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('''yield {'a': 4}''')
+            spider.record()
+            spider.test()
+            print(spider.__dict__)
+            print(spider.spider_text)
+            print(spider.__dict__)
