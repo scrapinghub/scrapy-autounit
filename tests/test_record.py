@@ -67,7 +67,7 @@ class CaseSpider(object):
         self.autounit_module_path = (
             '{}.middleware.AutounitMiddleware'.format('myproject'))
         self.autounit_utils_path = (
-            '{}.utils'.format('myproject'))
+            'utils'.format('myproject'))
         self.autounit_paths_update = {
         'scrapy_autounit.AutounitMiddleware': self.autounit_module_path,
         'scrapy_autounit.utils': self.autounit_utils_path,
@@ -93,7 +93,7 @@ class CaseSpider(object):
 
     def _write_spider(self):
         spider_folder = os.path.join(self.proj_dir, 'spiders')
-        spider_folder = self.proj_dir
+        # spider_folder = self.proj_dir
         self.spider_folder = spider_folder
         if not os.path.exists(spider_folder):
             os.mkdir(spider_folder)
@@ -146,7 +146,7 @@ class CaseSpider(object):
         result = run(
             command_args,
             env=env,
-            cwd='/',
+            cwd=self.dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -157,15 +157,17 @@ class CaseSpider(object):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
+        print('TEST\n\n')
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         result = run(
             [
-                'python', '-m', 'unittest', 'discover', '-v'
+                'python', '-m', 'unittest', 'discover',
+                '-s', 'autounit', '-p', "test_*.py"
             ],
-            cwd=self.proj_dir,
+            cwd=self.dir,
             env=env,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -188,6 +190,14 @@ class CaseSpider(object):
                     '\n'.join(itertree())
                 ))
 
+def list_files(startpath):
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        print('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print('{}{}'.format(subindent, f))
 
 class TestRecording(unittest.TestCase):
     def test_normal(self):
@@ -215,3 +225,4 @@ class TestRecording(unittest.TestCase):
             print(spider.__dict__)
             print(spider.spider_text)
             print(os.listdir(spider.proj_dir))
+            print(list_files(spider.dir))
