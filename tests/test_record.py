@@ -111,6 +111,7 @@ class CaseSpider(object):
     def _write_mw(self):
         # mw_folder = os.path.join(self.proj_dir, 'scrapy_autounit')
         mw_folder = self.proj_dir
+        self.mw_folder = mw_folder
         if not os.path.exists(mw_folder):
             os.mkdir(mw_folder)
         for item in os.listdir('scrapy_autounit'):
@@ -125,6 +126,15 @@ class CaseSpider(object):
                 with open(d, 'w') as dest:
                     dest.write(file_text)
                 #shutil.copyfile(s, d)
+
+    def _copy_utils(self):
+        s = os.path.join(self.mw_folder, 'utils.py')
+        startpath = os.path.join(self.dir, 'autounit')
+        for root, dirs, files in os.walk(startpath):
+            tests_present = any([re.findall(r'test\_.*\.py', f) for f in files])
+            if tests_present and 'utils.py' not in files:
+                d = os.path.join(root, 'utils.py')
+                shutil.copyfile(s, d)
 
     def record(self, args=None, settings=None):
         if self._start_requests is None or self._parse is None:
@@ -158,6 +168,7 @@ class CaseSpider(object):
 
     def test(self):
         print('TEST\n\n')
+        self._copy_utils()
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -192,6 +203,7 @@ class CaseSpider(object):
                     '\n'.join(itertree())
                 ))
 
+
 def list_files(startpath):
     for root, dirs, files in os.walk(startpath):
         level = root.replace(startpath, '').count(os.sep)
@@ -200,6 +212,7 @@ def list_files(startpath):
         subindent = ' ' * 4 * (level + 1)
         for f in files:
             print('{}{}'.format(subindent, f))
+
 
 class TestRecording(unittest.TestCase):
     def test_normal(self):
@@ -224,7 +237,7 @@ class TestRecording(unittest.TestCase):
             spider.test()
             import pdb
             #pdb.set_trace()
-            print(spider.__dict__)
-            print(spider.spider_text)
+            #print(spider.__dict__)
+            #print(spider.spider_text)
             print(os.listdir(spider.proj_dir))
             print(list_files(spider.dir))
