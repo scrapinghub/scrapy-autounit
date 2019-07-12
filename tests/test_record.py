@@ -67,7 +67,7 @@ class CaseSpider(object):
         self.autounit_module_path = (
             '{}.middleware.AutounitMiddleware'.format('myproject'))
         self.autounit_utils_path = (
-            'utils'.format('myproject'))
+            '{}.utils'.format('myproject'))
         self.autounit_paths_update = {
         'scrapy_autounit.AutounitMiddleware': self.autounit_module_path,
         'scrapy_autounit.utils': self.autounit_utils_path,
@@ -151,7 +151,7 @@ class CaseSpider(object):
             stderr=subprocess.PIPE,
         )
         # inspect_error
-        print(''.join(result['stderr'].decode()))
+        # print(''.join(result['stderr'].decode()))
         check_process('Running spider failed!', result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
@@ -165,7 +165,7 @@ class CaseSpider(object):
         result = run(
             [
                 'python', '-m', 'unittest', 'discover',
-                '-s', 'autounit', '-p', "test_*.py"
+                '-s', 'autounit', '-p', "test_*.py", "-v"
             ],
             cwd=self.dir,
             env=env,
@@ -174,13 +174,15 @@ class CaseSpider(object):
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
-        num_errors = re.findall(r'Ran (\d+) tests', err)
-        print(num_errors)
+        num_tests = re.findall(r'Ran (\d+) test', err)
+        is_ok = re.findall('OK$', err)
+        print(num_tests)
         print(result)
         # inspect_error
         print(''.join(result['stderr'].decode()))
-        if (not num_errors
-            or (isinstance(num_errors, list) and int(num_errors[0]) > 0)):
+        print(list_files(self.dir))
+        if (not is_ok or not num_tests
+            or (isinstance(num_tests, list) and int(num_tests[0]) == 0)):
             def itertree():
                 for root, dirs, files in os.walk(self.dir):
                     for f in files:
