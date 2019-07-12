@@ -15,7 +15,7 @@ class MySpider(scrapy.Spider):
 
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
-            'scrapy_autounit.middleware.AutounitMiddleware': 950,
+            '{autonit_module_path}': 950,
         }}
     )
 
@@ -28,12 +28,11 @@ class MySpider(scrapy.Spider):
 
 
 def run(*pargs, **kwargs):
-    proc = subprocess.Popen(*pargs, **kwargs)
-    proc.wait()
+    proc = subprocess.run(*pargs, **kwargs)
     return {
         'returncode': proc.returncode,
-        'stdout': proc.stdout.read(),
-        'stderr': proc.stderr.read(),
+        'stdout': proc.stdout,
+        'stderr': proc.stderr,
     }
 
 
@@ -65,9 +64,18 @@ class CaseSpider(object):
             pass
         with open(os.path.join(self.proj_dir, 'settings.py'), 'w') as dest:
             dest.write('SPIDER_MODULES = ["myproject"]\n')
+        self.autounit_module_path = (
+            '{}.middleware.AutounitMiddleware'.format('myproject'))
+        self.autounit_utils_path = (
+            '{}.utils'.format('myproject'))
+        self.autounit_paths_update = {
+        'scrapy_autounit.AutounitMiddleware': self.autounit_module_path,
+        'scrapy_autounit.utils': self.autounit_utils_path,
+        }
         self._write_mw()
         self._start_requests = None
         self._parse = None
+
 
     def __enter__(self):
         return self
@@ -84,22 +92,39 @@ class CaseSpider(object):
         self._write_spider()
 
     def _write_spider(self):
-        with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
+        spider_folder = os.path.join(self.proj_dir, 'spiders')
+        spider_folder = self.proj_dir
+        self.spider_folder = spider_folder
+        if not os.path.exists(spider_folder):
+            os.mkdir(spider_folder)
+        with open(os.path.join(spider_folder, 'myspider.py'), 'w') as dest:
             self.spider_text = SPIDER_TEMPLATE.format(
                 start_requests=self._start_requests,
-                parse=self._parse
+                parse=self._parse,
+                autonit_module_path=self.autounit_module_path,
             )
+            dest.write(self.spider_text)
+        with open(os.path.join(spider_folder, '__init__.py'), 'w') as dest:
+            self.spider_text = ""
             dest.write(self.spider_text)
 
     def _write_mw(self):
-        mw_folder = os.path.join(self.proj_dir, 'scrapy_autounit')
+        # mw_folder = os.path.join(self.proj_dir, 'scrapy_autounit')
+        mw_folder = self.proj_dir
         if not os.path.exists(mw_folder):
             os.mkdir(mw_folder)
         for item in os.listdir('scrapy_autounit'):
             if item.endswith('.py'):
+                print(item)
                 s = os.path.join('scrapy_autounit', item)
                 d = os.path.join(mw_folder, item)
-                shutil.copyfile(s, d)
+                with open(s, 'r') as file:
+                    file_text = file.read()
+                for k, v in self.autounit_paths_update.items():
+                    file_text = file_text.replace(k, v)
+                with open(d, 'w') as dest:
+                    dest.write(file_text)
+                #shutil.copyfile(s, d)
 
     def record(self, args=None, settings=None):
         if self._start_requests is None or self._parse is None:
@@ -117,6 +142,7 @@ class CaseSpider(object):
         for k, v in (settings or {}).items():
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
+        print(command_args)
         result = run(
             command_args,
             env=env,
@@ -124,6 +150,8 @@ class CaseSpider(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+        # inspect_error
+        print(''.join(result['stderr'].decode()))
         check_process('Running spider failed!', result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
@@ -137,7 +165,7 @@ class CaseSpider(object):
             [
                 'python', '-m', 'unittest', 'discover', '-v'
             ],
-            cwd=self.dir,
+            cwd=self.proj_dir,
             env=env,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -145,8 +173,10 @@ class CaseSpider(object):
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
         num_errors = re.findall(r'Ran (\d+) tests', err)
-        # print(num_errors)
-        # print(result)
+        print(num_errors)
+        print(result)
+        # inspect_error
+        print(''.join(result['stderr'].decode()))
         if (not num_errors
             or (isinstance(num_errors, list) and int(num_errors[0]) > 0)):
             def itertree():
@@ -163,27 +193,25 @@ class TestRecording(unittest.TestCase):
     def test_normal(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
-            spider.parse('''
-                yield {'a': 4}
-            ''')
+            spider.parse("yield {'a': 4}")
             spider.record()
             spider.test()
 
     def test_path_extra(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
-            spider.parse('''
-                yield {'a': 4}
-            ''')
+            spider.parse("yield {'a': 4}")
             spider.record(settings=dict(AUTOUNIT_EXTRA_PATH='abc'))
             spider.test()
 
     def test_spider_attributes(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
-            spider.parse('''yield {'a': 4}''')
+            spider.parse("yield {'a': 4}")
             spider.record()
             spider.test()
+            import pdb
+            #pdb.set_trace()
             print(spider.__dict__)
             print(spider.spider_text)
-            print(spider.__dict__)
+            print(os.listdir(spider.proj_dir))
