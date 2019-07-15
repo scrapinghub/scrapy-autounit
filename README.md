@@ -131,5 +131,12 @@ Sets a list of settings names to be recorded in the generated test case.
 This is an extra string element to add to the test path and name between the spider name and callback name. You can use this to separate tests from the same spider with different configurations.  
 `Default: None`
 
+**AUTOUNIT_EXCLUDE_ATTRIBUTES**
+Sets a list of the spider arguments to exclude from requests recording. 
+The names of the attributes can be passed as a list separating them by commas, i.e. `-s AUTOUNIT_EXCLUDED_ATTRIBUTES=param1,param2'`. This list element can also contain regular expressions, i.e. `-s AUTOUNIT_EXCLUDED_ATTRIBUTES=date_.*,start_url'`.
+`Default: []`
+
+(In order to remove these attributes also in the test set `AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'`) 
+
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.
