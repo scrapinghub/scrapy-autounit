@@ -160,6 +160,11 @@ class CaseSpider(object):
             command_args.append('-a')
             command_args.append('{}={}'.format(k, v))
         for k, v in (settings or {}).items():
+            if isinstance(v, list):
+                for _v in v:
+                    command_args.append('-s')
+                    command_args.append('{}={}'.format(k, _v))
+                continue
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
         result = run(
@@ -232,7 +237,7 @@ class TestRecording(unittest.TestCase):
             spider.record()
             spider.test()
 
-    def test_spider_attributes_skip(self):
+    def test_spider_attributes_skip_one_attr(self):
         with CaseSpider() as spider:
             spider.start_requests("""
                 self._base_url = 'www.nothing.com'
@@ -244,5 +249,20 @@ class TestRecording(unittest.TestCase):
             """)
             spider.record(settings=dict(
                 AUTOUNIT_EXCLUDED_ATTRIBUTE='start_urls',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTE'))
+            spider.test()
+
+    def test_spider_attributes_skip_attrs(self):
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTE=['start_urls', '_base_url'],
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTE'))
             spider.test()
