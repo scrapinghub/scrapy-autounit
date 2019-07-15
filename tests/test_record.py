@@ -66,6 +66,16 @@ def print_test_output(result):
     print(indent_message(''.join(result['stderr'].decode())))
 
 
+def itertree(startpath):
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        yield('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            yield('{}{}'.format(subindent, f))
+
+
 class CaseSpider(object):
     def __init__(self):
         self.dir = tempfile.mkdtemp()
@@ -184,46 +194,37 @@ class CaseSpider(object):
         is_ok = re.findall('OK$', err)
         if (not is_ok or not num_tests or (
                 isinstance(num_tests, list) and int(num_tests[0]) == 0)):
-            def itertree():
-                for root, dirs, files in os.walk(self.dir):
-                    for f in files:
-                        yield os.path.join(root, f)
             raise AssertionError(
                 'No tests run!\nProject dir:\n{}'.format(
-                    '\n'.join(itertree())
+                    '\n'.join(itertree(self.dir))
                 ))
-
-
-def list_files(startpath):
-    for root, dirs, files in os.walk(startpath):
-        level = root.replace(startpath, '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        print('{}{}/'.format(indent, os.path.basename(root)))
-        subindent = ' ' * 4 * (level + 1)
-        for f in files:
-            print('{}{}'.format(subindent, f))
 
 
 class TestRecording(unittest.TestCase):
     def test_normal(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
-            spider.parse("yield {'a': 4}")
+            spider.parse("""
+                yield {'a': 4}
+            """)
             spider.record()
             spider.test()
 
     def test_path_extra(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
-            spider.parse("yield {'a': 4}")
+            spider.parse("""
+                yield {'a': 4}
+            """)
             spider.record(settings=dict(AUTOUNIT_EXTRA_PATH='abc'))
             spider.test()
 
     def test_spider_attributes(self):
         with CaseSpider() as spider:
             spider.start_requests("""
-            self._base_url = 'www.nothing.com'
-            yield scrapy.Request('data:text/plain,')""")
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
             spider.parse("""
                 self.param = 1
                 yield {'a': 4}
@@ -234,8 +235,9 @@ class TestRecording(unittest.TestCase):
     def test_spider_attributes_skip(self):
         with CaseSpider() as spider:
             spider.start_requests("""
-            self._base_url = 'www.nothing.com'
-            yield scrapy.Request('data:text/plain,')""")
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
             spider.parse("""
                 self.param = 1
                 yield {'a': 4}
