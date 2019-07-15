@@ -55,6 +55,17 @@ def check_process(message, result):
     process_error(message, result)
 
 
+def indent_message(text):
+    _text = re.sub(r'(\n)(\n*)', r'\n\t', text)
+    return re.sub(r'^([\n\t]*)(.*)', r'\t\2', _text)
+
+
+def print_test_output(result):
+    # Print the output of the tests
+    print(indent_message(''.join(result['stdout'].decode())))
+    print(indent_message(''.join(result['stderr'].decode())))
+
+
 class CaseSpider(object):
     def __init__(self):
         self.dir = tempfile.mkdtemp()
@@ -155,7 +166,6 @@ class CaseSpider(object):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
-        print('TEST\n\n')
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -170,14 +180,12 @@ class CaseSpider(object):
             stdout=subprocess.PIPE,
         )
         check_process('Unit tests failed!', result)
+        print_test_output(result)
         err = result['stderr'].decode('utf-8')
         num_tests = re.findall(r'Ran (\d+) test', err)
         is_ok = re.findall('OK$', err)
-        # Print the output of the tests
-        print(''.join(result['stdout'].decode()))
-        print(''.join(result['stderr'].decode()))
-        if (not is_ok or not num_tests
-            or (isinstance(num_tests, list) and int(num_tests[0]) == 0)):
+        if (not is_ok or not num_tests or (
+                isinstance(num_tests, list) and int(num_tests[0]) == 0)):
             def itertree():
                 for root, dirs, files in os.walk(self.dir):
                     for f in files:
