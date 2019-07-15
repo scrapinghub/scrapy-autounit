@@ -6,9 +6,6 @@ import shutil
 import re
 
 
-import logging
-logger = logging.getLogger(__name__)
-
 SPIDER_TEMPLATE = '''
 import scrapy
 
@@ -163,9 +160,6 @@ class CaseSpider(object):
             command_args.append('-a')
             command_args.append('{}={}'.format(k, v))
         for k, v in (settings or {}).items():
-            if isinstance(v, list):
-                command_args.append('-s')
-                command_args.append('{}={}'.format(k, ','.join(v)))
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
         result = run(
@@ -238,7 +232,6 @@ class TestRecording(unittest.TestCase):
             spider.record()
             spider.test()
 
-    def test_spider_attributes_skip_one_attr(self):
         with CaseSpider() as spider:
             spider.start_requests("""
                 self._base_url = 'www.nothing.com'
@@ -253,7 +246,6 @@ class TestRecording(unittest.TestCase):
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
             spider.test()
 
-    def test_spider_attributes_skip_attrs(self):
         with CaseSpider() as spider:
             spider.start_requests("""
                 self._base_url = 'www.nothing.com'
@@ -265,6 +257,67 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_urls', '_base_url'],
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls,_base_url',
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
             spider.test()
+
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_.*,_base_url',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
+
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_date,__base_url',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
+
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url'],
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            with self.assertRaises(AssertionError):
+                spider.test()
+
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url']))
+            with self.assertRaises(AssertionError):
+                spider.test()
