@@ -321,3 +321,23 @@ class TestRecording(unittest.TestCase):
                 AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url']))
             with self.assertRaises(AssertionError):
                 spider.test()
+
+    def test_spider_attributes_recursive(self):
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                yield from self.parse_item()
+
+            def parse_item(self):
+                self.page = getattr(self, 'page', 0) + 1
+                if self.page > 2:
+                    return
+                for i in range(2):
+                    yield from self.parse()
+            """)
+            spider.record()
+            spider.test()
