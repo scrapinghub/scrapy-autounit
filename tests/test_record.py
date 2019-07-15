@@ -168,7 +168,6 @@ class CaseSpider(object):
                 command_args.append('{}={}'.format(k, ','.join(v)))
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
-        print(command_args)
         result = run(
             command_args,
             env=env,
@@ -176,7 +175,6 @@ class CaseSpider(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        # print_test_output(result)
         check_process('Running spider failed!', result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
@@ -251,8 +249,8 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTE='start_urls',
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTE'))
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
             spider.test()
 
     def test_spider_attributes_skip_attrs(self):
@@ -267,6 +265,6 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTE=['start_urls', '_base_url'],
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTE'))
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_urls', '_base_url'],
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
             spider.test()

@@ -191,7 +191,7 @@ def _clean_attr(spider_attr, _exclude_attr):
 
 
 def get_spider_attr(spider, settings):
-    _exclude_attr = settings.get("AUTOUNIT_EXCLUDED_ATTRIBUTE", default=[])
+    _exclude_attr = settings.get("AUTOUNIT_EXCLUDED_ATTRIBUTES", default=[])
     if not isinstance(_exclude_attr, (list, tuple)):
         if re.findall(r'^\[.*\]$', _exclude_attr):
             _exclude_attr = eval(_exclude_attr)
