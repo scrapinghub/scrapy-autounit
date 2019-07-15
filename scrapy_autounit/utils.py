@@ -21,6 +21,9 @@ from scrapy.utils.conf import (
     build_component_list,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
@@ -73,6 +76,7 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
 
 
 def add_sample(index, test_dir, test_name, data):
+    logger.info(data)
     fixture_name = 'fixture%s' % str(index)
     filename = fixture_name + '.bin'
     path = test_dir / filename
@@ -189,7 +193,10 @@ def _clean_attr(spider_attr, _exclude_attr):
 def get_spider_attr(spider, settings):
     _exclude_attr = settings.get("AUTOUNIT_EXCLUDED_ATTRIBUTE", default=[])
     if not isinstance(_exclude_attr, (list, tuple)):
-        _exclude_attr = [_exclude_attr]
+        if re.findall(r'^\[.*\]$', _exclude_attr):
+            _exclude_attr = eval(_exclude_attr)
+        else:
+            _exclude_attr = [_exclude_attr]
     spider_attr = _clean_attr(spider.__dict__.copy(), _exclude_attr)
     return spider_attr
 

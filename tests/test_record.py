@@ -6,6 +6,9 @@ import shutil
 import re
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 SPIDER_TEMPLATE = '''
 import scrapy
 
@@ -161,12 +164,11 @@ class CaseSpider(object):
             command_args.append('{}={}'.format(k, v))
         for k, v in (settings or {}).items():
             if isinstance(v, list):
-                for _v in v:
-                    command_args.append('-s')
-                    command_args.append('{}={}'.format(k, _v))
-                continue
+                command_args.append('-s')
+                command_args.append('{}={}'.format(k, ','.join(v)))
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
+        print(command_args)
         result = run(
             command_args,
             env=env,
@@ -174,6 +176,7 @@ class CaseSpider(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+        # print_test_output(result)
         check_process('Running spider failed!', result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
@@ -260,6 +263,7 @@ class TestRecording(unittest.TestCase):
             """)
             spider.parse("""
                 self.param = 1
+                self.param2 = 1
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
