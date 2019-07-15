@@ -24,6 +24,9 @@ class MySpider(scrapy.Spider):
 
     def parse(self, response):
         {parse}
+
+    def parse_item(self):
+        {parse_item}
 '''
 
 
@@ -99,6 +102,7 @@ class CaseSpider(object):
         self._write_mw()
         self._start_requests = None
         self._parse = None
+        self._parse_item = None
 
     def __enter__(self):
         return self
@@ -114,6 +118,10 @@ class CaseSpider(object):
         self._parse = string
         self._write_spider()
 
+    def parse_item(self, string):
+        self._parse_item = string
+        self._write_spider()
+
     def _write_spider(self):
         spider_folder = os.path.join(self.proj_dir, 'spiders')
         self.spider_folder = spider_folder
@@ -123,9 +131,11 @@ class CaseSpider(object):
             self.spider_text = SPIDER_TEMPLATE.format(
                 start_requests=self._start_requests,
                 parse=self._parse,
+                parse_item= self._parse_item,
                 autonit_module_path=self.autounit_module_path,
             )
             dest.write(self.spider_text)
+            # print(self.spider_text)
         with open(os.path.join(spider_folder, '__init__.py'), 'w') as dest:
             dest.write("")
 
@@ -169,6 +179,7 @@ class CaseSpider(object):
             stderr=subprocess.PIPE,
         )
         check_process('Running spider failed!', result)
+        # print_test_output(result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
 
@@ -200,126 +211,126 @@ class CaseSpider(object):
 
 
 class TestRecording(unittest.TestCase):
-    # def test_normal(self):
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("yield scrapy.Request('data:text/plain,')")
-    #         spider.parse("""
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record()
-    #         spider.test()
+    def test_normal(self):
+        with CaseSpider() as spider:
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse("""
+                yield {'a': 4}
+            """)
+            spider.record()
+            spider.test()
 
-    # def test_path_extra(self):
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("yield scrapy.Request('data:text/plain,')")
-    #         spider.parse("""
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(AUTOUNIT_EXTRA_PATH='abc'))
-    #         spider.test()
+    def test_path_extra(self):
+        with CaseSpider() as spider:
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse("""
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(AUTOUNIT_EXTRA_PATH='abc'))
+            spider.test()
 
-    # def test_spider_attributes(self):
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record()
-    #         spider.test()
+    def test_spider_attributes(self):
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                yield {'a': 4}
+            """)
+            spider.record()
+            spider.test()
 
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(
-    #             AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls',
-    #             AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-    #         spider.test()
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
 
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             self.param2 = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(
-    #             AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls,_base_url',
-    #             AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-    #         spider.test()
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls,_base_url',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
 
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             self.param2 = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(
-    #             AUTOUNIT_EXCLUDED_ATTRIBUTES='start_.*,_base_url',
-    #             AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-    #         spider.test()
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_.*,_base_url',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
 
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             self.param2 = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(
-    #             AUTOUNIT_EXCLUDED_ATTRIBUTES='start_date,__base_url',
-    #             AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-    #         spider.test()
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_date,__base_url',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
 
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             self.param2 = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(
-    #             AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url'],
-    #             AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-    #         with self.assertRaises(AssertionError):
-    #             spider.test()
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url'],
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            with self.assertRaises(AssertionError):
+                spider.test()
 
-    #     with CaseSpider() as spider:
-    #         spider.start_requests("""
-    #             self._base_url = 'www.nothing.com'
-    #             yield scrapy.Request('data:text/plain,')
-    #         """)
-    #         spider.parse("""
-    #             self.param = 1
-    #             self.param2 = 1
-    #             yield {'a': 4}
-    #         """)
-    #         spider.record(settings=dict(
-    #             AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url']))
-    #         with self.assertRaises(AssertionError):
-    #             spider.test()
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url']))
+            with self.assertRaises(AssertionError):
+                spider.test()
 
     def test_spider_attributes_recursive(self):
         with CaseSpider() as spider:
@@ -330,14 +341,15 @@ class TestRecording(unittest.TestCase):
             spider.parse("""
                 self.param = 1
                 yield from self.parse_item()
-
-                def parse_item(self):
-                    self.page = getattr(self, 'page', 0) + 1
-                    if self.page > 2:
-                        return
-                    for i in range(2):
-                        yield from self.parse()
             """)
+            spider.parse_item("""
+                self.__page = getattr(self, '__page', 0) + 1
+                if self.__page > 3:
+                    return
+                for i in range(2):
+                    yield scrapy.Request('data:text/plain,',
+                                         callback=self.parse)
+                                         """)
             spider.record()
             spider.test()
             print(spider.spider_text)

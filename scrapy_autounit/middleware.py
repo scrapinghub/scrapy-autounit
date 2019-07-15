@@ -87,7 +87,6 @@ class AutounitMiddleware:
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],
         }
-
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
         self.fixture_counters[callback_name] += 1
 

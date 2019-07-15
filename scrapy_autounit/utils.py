@@ -291,4 +291,5 @@ def test_generator(fixture_path):
         fixture_attr = data['spider_attr']
         result_attr = get_spider_attr(spider, settings)
         self.assertEqual(fixture_attr, result_attr, "Not equal!")
+        # print(fixture_attr, result_attr)
     return test
