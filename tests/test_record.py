@@ -64,18 +64,20 @@ class CaseSpider(object):
             pass
         with open(os.path.join(self.proj_dir, 'settings.py'), 'w') as dest:
             dest.write('SPIDER_MODULES = ["myproject"]\n')
+        # The test is performed in the files not in the installed package.
+        # Replace path of modules for the test to reference the local path
+        # where the files are copied: scrapy_autounit.utils -> .utils
         self.autounit_module_path = (
             '{}.middleware.AutounitMiddleware'.format('myproject'))
         self.autounit_utils_path = (
             '{}.utils'.format('myproject'))
         self.autounit_paths_update = {
-        'scrapy_autounit.AutounitMiddleware': self.autounit_module_path,
-        'scrapy_autounit.utils': self.autounit_utils_path,
+            'scrapy_autounit.AutounitMiddleware': self.autounit_module_path,
+            'scrapy_autounit.utils': self.autounit_utils_path,
         }
         self._write_mw()
         self._start_requests = None
         self._parse = None
-
 
     def __enter__(self):
         return self
@@ -93,7 +95,6 @@ class CaseSpider(object):
 
     def _write_spider(self):
         spider_folder = os.path.join(self.proj_dir, 'spiders')
-        # spider_folder = self.proj_dir
         self.spider_folder = spider_folder
         if not os.path.exists(spider_folder):
             os.mkdir(spider_folder)
@@ -109,14 +110,12 @@ class CaseSpider(object):
             dest.write(self.spider_text)
 
     def _write_mw(self):
-        # mw_folder = os.path.join(self.proj_dir, 'scrapy_autounit')
         mw_folder = self.proj_dir
         self.mw_folder = mw_folder
         if not os.path.exists(mw_folder):
             os.mkdir(mw_folder)
         for item in os.listdir('scrapy_autounit'):
-            if item.endswith('.py'):
-                print(item)
+            if item.endswith('.py') and item != '__init__.py':
                 s = os.path.join('scrapy_autounit', item)
                 d = os.path.join(mw_folder, item)
                 with open(s, 'r') as file:
@@ -125,16 +124,6 @@ class CaseSpider(object):
                     file_text = file_text.replace(k, v)
                 with open(d, 'w') as dest:
                     dest.write(file_text)
-                #shutil.copyfile(s, d)
-
-    def _copy_utils(self):
-        s = os.path.join(self.mw_folder, 'utils.py')
-        startpath = os.path.join(self.dir, 'autounit')
-        for root, dirs, files in os.walk(startpath):
-            tests_present = any([re.findall(r'test\_.*\.py', f) for f in files])
-            if tests_present and 'utils.py' not in files:
-                d = os.path.join(root, 'utils.py')
-                shutil.copyfile(s, d)
 
     def record(self, args=None, settings=None):
         if self._start_requests is None or self._parse is None:
@@ -152,7 +141,6 @@ class CaseSpider(object):
         for k, v in (settings or {}).items():
             command_args.append('-s')
             command_args.append('{}={}'.format(k, v))
-        print(command_args)
         result = run(
             command_args,
             env=env,
@@ -168,15 +156,13 @@ class CaseSpider(object):
 
     def test(self):
         print('TEST\n\n')
-        self._copy_utils()
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         result = run(
             [
-                'python', '-m', 'unittest', 'discover',
-                '-s', 'autounit', '-p', "test_*.py", "-v"
+                'python', '-m', 'unittest', 'discover', '-v'
             ],
             cwd=self.dir,
             env=env,
@@ -187,11 +173,9 @@ class CaseSpider(object):
         err = result['stderr'].decode('utf-8')
         num_tests = re.findall(r'Ran (\d+) test', err)
         is_ok = re.findall('OK$', err)
-        print(num_tests)
-        print(result)
-        # inspect_error
+        # Print the output of the tests
+        print(''.join(result['stdout'].decode()))
         print(''.join(result['stderr'].decode()))
-        print(list_files(self.dir))
         if (not is_ok or not num_tests
             or (isinstance(num_tests, list) and int(num_tests[0]) == 0)):
             def itertree():
@@ -231,13 +215,26 @@ class TestRecording(unittest.TestCase):
 
     def test_spider_attributes(self):
         with CaseSpider() as spider:
-            spider.start_requests("yield scrapy.Request('data:text/plain,')")
-            spider.parse("yield {'a': 4}")
+            spider.start_requests("""
+            self._base_url = 'www.nothing.com'
+            yield scrapy.Request('data:text/plain,')""")
+            spider.parse("""
+                self.param = 1
+                yield {'a': 4}
+            """)
             spider.record()
             spider.test()
-            import pdb
-            #pdb.set_trace()
-            #print(spider.__dict__)
-            #print(spider.spider_text)
-            print(os.listdir(spider.proj_dir))
-            print(list_files(spider.dir))
+
+    def test_spider_attributes_skip(self):
+        with CaseSpider() as spider:
+            spider.start_requests("""
+            self._base_url = 'www.nothing.com'
+            yield scrapy.Request('data:text/plain,')""")
+            spider.parse("""
+                self.param = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTE='start_urls',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTE'))
+            spider.test()
