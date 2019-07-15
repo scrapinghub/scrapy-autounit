@@ -159,8 +159,6 @@ class CaseSpider(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        # inspect_error
-        # print(''.join(result['stderr'].decode()))
         check_process('Running spider failed!', result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
