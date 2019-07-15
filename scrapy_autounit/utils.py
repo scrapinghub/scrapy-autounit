@@ -21,8 +21,6 @@ from scrapy.utils.conf import (
     build_component_list,
 )
 
-import logging
-logger = logging.getLogger(__name__)
 
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
@@ -46,7 +44,6 @@ def get_middlewares(spider):
 
     full_list = build_component_list(
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
-    logger.info(full_list)
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
 
@@ -188,9 +185,9 @@ def _clean_attr(spider_attr, _exclude_attr):
                                      for _pattern in _exclude_attr]))}
     return _spider_attr
 
+
 def get_spider_attr(spider, settings):
     _exclude_attr = settings.get("AUTOUNIT_EXCLUDED_ATTRIBUTE", default=[])
-    print(_exclude_attr)
     if not isinstance(_exclude_attr, (list, tuple)):
         _exclude_attr = [_exclude_attr]
     spider_attr = _clean_attr(spider.__dict__.copy(), _exclude_attr)
@@ -224,8 +221,6 @@ if __name__ == '__main__':
 
     with open(str(test_path), 'w') as f:
         f.write(test_code)
-    logger.info('Wrote test: %s' %test_path)
-    logger.info(test_code)
 
 
 def test_generator(fixture_path):
@@ -297,5 +292,4 @@ def test_generator(fixture_path):
         fixture_attr = data['spider_attr']
         result_attr = get_spider_attr(spider, settings)
         self.assertEqual(fixture_attr, result_attr, "Not equal!")
-        print(fixture_attr, result_attr)
     return test
