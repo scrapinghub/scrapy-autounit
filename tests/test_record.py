@@ -5,7 +5,6 @@ import os
 import shutil
 import re
 
-
 SPIDER_TEMPLATE = '''
 import scrapy
 
@@ -301,6 +300,7 @@ class TestRecording(unittest.TestCase):
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
             spider.test()
 
+        # Test invalid list formats
         with CaseSpider() as spider:
             spider.start_requests("""
                 self._base_url = 'www.nothing.com'
@@ -311,9 +311,11 @@ class TestRecording(unittest.TestCase):
                 self.param2 = 1
                 yield {'a': 4}
             """)
+
             spider.record(settings=dict(
                 AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url'],
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+
             with self.assertRaises(AssertionError):
                 spider.test()
 
