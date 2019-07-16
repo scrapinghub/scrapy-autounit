@@ -179,16 +179,20 @@ def get_valid_identifier(name):
 
 
 def _clean_attr(spider_attr, _exclude_attr):
+    _re_exclude_attr = re.compile(r'|'.join(_exclude_attr))
+    print(_re_exclude_attr)
     _spider_attr = {k: v for k, v in spider_attr.items()
                     if (k not in ['settings', 'crawler']
-                        and not any([re.findall(_pattern, k)
-                                     for _pattern in _exclude_attr]))}
+                        and not _re_exclude_attr.findall(k))}
     return _spider_attr
 
 
 def get_spider_attr(spider, settings):
     _exclude_attr = settings.getlist("AUTOUNIT_EXCLUDED_ATTRIBUTES",
                                      default=[])
+    print(','.join(_exclude_attr))
+    if re.findall(r'[\[\]]+',''.join(_exclude_attr)):
+        raise ValueError("'AUTOUNIT_EXCLUDED_ATTRIBUTES' should contain a list of paramenters")
     spider_attr = _clean_attr(spider.__dict__.copy(), _exclude_attr)
     return spider_attr
 
@@ -240,7 +244,8 @@ def test_generator(fixture_path):
         settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
-    for k, v in data['spider_attr'].items():
+    print(data.get('spider_attr'))
+    for k, v in data.get('spider_attr').items():
         setattr(spider, k, v)
     crawler = Crawler(spider_cls, settings)
 
@@ -293,5 +298,7 @@ def test_generator(fixture_path):
         fixture_attr = data['spider_attr']
         result_attr = get_spider_attr(spider, settings)
         self.assertEqual(fixture_attr, result_attr, "Not equal!")
-        print(fixture_attr, result_attr)
+        #import pandas as pd
+        #print(pd.concat([pd.Series(result_attr).rename('result'), pd.Series(fixture_attr).rename('test_result')],axis=1))
+        # print(fixture_attr, result_attr)
     return test

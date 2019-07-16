@@ -266,37 +266,22 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
+                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_,_base_url',
+                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
+            spider.test()
+
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self._base_url = 'www.nothing.com'
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.param = 1
+                self.param2 = 1
+                yield {'a': 4}
+            """)
+            spider.record(settings=dict(
                 AUTOUNIT_EXCLUDED_ATTRIBUTES='start_urls,_base_url',
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-            spider.test()
-
-        with CaseSpider() as spider:
-            spider.start_requests("""
-                self._base_url = 'www.nothing.com'
-                yield scrapy.Request('data:text/plain,')
-            """)
-            spider.parse("""
-                self.param = 1
-                self.param2 = 1
-                yield {'a': 4}
-            """)
-            spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_.*,_base_url',
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
-            spider.test()
-
-        with CaseSpider() as spider:
-            spider.start_requests("""
-                self._base_url = 'www.nothing.com'
-                yield scrapy.Request('data:text/plain,')
-            """)
-            spider.parse("""
-                self.param = 1
-                self.param2 = 1
-                yield {'a': 4}
-            """)
-            spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTES='start_date,__base_url',
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
             spider.test()
 
@@ -312,8 +297,9 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
 
+            # with self.assertRaises(ValueError):
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url'],
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_urls', '_base_url'],
                 AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_ATTRIBUTES'))
 
             with self.assertRaises(AssertionError):
@@ -330,7 +316,7 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_date', '__base_url']))
+                AUTOUNIT_EXCLUDED_ATTRIBUTES=['start_urls', '_base_url']))
             with self.assertRaises(AssertionError):
                 spider.test()
 
