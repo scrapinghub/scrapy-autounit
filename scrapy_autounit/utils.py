@@ -240,6 +240,8 @@ def test_generator(fixture_path):
         settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
+    for k, v in data['spider_attr'].items():
+        setattr(spider, k, v)
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
