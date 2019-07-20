@@ -13,7 +13,6 @@ from .utils import (
     get_project_dir,
     get_middlewares,
     create_dir,
-    get_spider_attr,
 )
 
 import traceback, sys
@@ -77,8 +76,10 @@ class AutounitMiddleware:
         input_data = response.meta.pop('_autounit')
         request = input_data['request']
         callback_name = request['callback']
-        spider_attr = get_spider_attr(spider,
-                                      settings)
+        spider_attr = {
+                k: v for k, v in spider.__dict__.items()
+                if k not in ('crawler', 'settings', 'start_urls')
+            }
 
         data = {
             'spider_name': spider.name,
@@ -86,6 +87,7 @@ class AutounitMiddleware:
             'response': input_data['response'],
             'spider_args_out': spider_attr,
             'result': processed_result,
+            'spider_args_in': input_data['spider_args'],
             'spider_args': input_data['spider_args'],
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],

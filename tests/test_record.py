@@ -269,23 +269,29 @@ class TestRecording(unittest.TestCase):
             """)
             spider.parse_item("""
                 print("-"*60)
-                # traceback.print_exc(file=sys.stdout, capture_locals=True)
-                #summary = traceback.StackSummary.extract(
-                #    traceback.walk_stack(None), capture_locals=True
-                #)
-                # print(''.join(summary.format()))
-                print("-"*60)
-                self.__page = getattr(self, '__page', 0) + 1
-                if self.__page > 2:
+                self.__page = getattr(self, '_MySpider__page', 0) + 1
+                if self.__page > 3:
+                    self.end = True
                     return {'a': 4}
-                for i in range(2):
+
+                print('self.__page=', self.__page)
+                print("-"*60)
+                for i in range(3):
                     print('%s_%s;'%(self.__page, i))
-                    yield scrapy.Request('data:,%s_%s;'%(self.__page, i),
-                                         callback=self.parse)
+                    yield {'a': '%s_%s;'%(self.__page, i)}
+
+                yield scrapy.Request('data:,%s;'%(self.__page),
+                                      callback=self.parse)
                                          """)
             spider.record()
             spider.test()
             print(spider.spider_text)
+            # traceback.print_exc(file=sys.stdout, capture_locals=True)
+            # summary = traceback.StackSummary.extract(
+            #    traceback.walk_stack(None), capture_locals=True
+            # )
+            # print(''.join(summary.format()))
+            # self.__page = getattr(self, '__page', 0) + 1
 
     # def test_spider_attributes(self):
     #     with CaseSpider() as spider:
