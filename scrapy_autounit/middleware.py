@@ -15,7 +15,6 @@ from .utils import (
     create_dir,
 )
 
-import traceback, sys
 
 def _copy_settings(settings):
     out = {}
@@ -57,8 +56,6 @@ class AutounitMiddleware:
                 if k not in ('crawler', 'settings', 'start_urls')
             },
             'middlewares': get_middlewares(spider),
-            'traceback':traceback.StackSummary.extract(
-                traceback.walk_stack(None), capture_locals=True),
         }
         return None
 
@@ -77,9 +74,9 @@ class AutounitMiddleware:
         request = input_data['request']
         callback_name = request['callback']
         spider_attr = {
-                k: v for k, v in spider.__dict__.items()
-                if k not in ('crawler', 'settings', 'start_urls')
-            }
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
 
         data = {
             'spider_name': spider.name,
@@ -91,8 +88,6 @@ class AutounitMiddleware:
             'spider_args': input_data['spider_args'],
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],
-            'traceback_out':traceback.StackSummary.extract(
-                traceback.walk_stack(None), capture_locals=True),
         }
         self.fixture_counters[callback_name] = (
             self.fixture_counters.setdefault(callback_name, 0) + 1)

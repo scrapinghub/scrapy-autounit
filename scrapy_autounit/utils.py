@@ -21,7 +21,6 @@ from scrapy.utils.conf import (
     build_component_list,
 )
 
-import pdb
 
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
@@ -47,8 +46,6 @@ def get_middlewares(spider):
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
-    # mw_paths = [mw for mw in full_list if mw != autounit_mw_path]
-    # mw_paths = full_list
     return mw_paths
 
 
@@ -180,14 +177,6 @@ def get_valid_identifier(name):
     return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
 
 
-def _clean_attr(spider_attr, _exclude_attr):
-    _re_exclude_attr = re.compile(r'|'.join(_exclude_attr))
-    _spider_attr = {k: v for k, v in spider_attr.items()
-                    if (k not in ['settings', 'crawler']
-                        and not _re_exclude_attr.findall(k))}
-    return _spider_attr
-
-
 def write_test(path, test_name, fixture_name):
     test_path = path / ('test_%s.py' % (fixture_name))
 
@@ -222,6 +211,7 @@ def set_spider_attrs(spider, _args):
         setattr(spider, k, v)
     return spider
 
+
 def test_generator(fixture_path):
     global spider
     with open(str(fixture_path), 'rb') as f:
@@ -241,16 +231,12 @@ def test_generator(fixture_path):
         settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
-    # print(data.get('spider_args_out'))
-    # for k, v in data.get('spider_args').items():
-    #     setattr(spider, k, v)
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
         global spider
         fixture_objects = data['result']
-        # print(data)
-        
+
         spider = set_spider_attrs(spider, data['spider_args'])
 
         request = request_from_dict(data['request'], spider)
@@ -266,51 +252,33 @@ def test_generator(fixture_path):
             except NotConfigured:
                 continue
             middlewares.append(mw)
-        print("Middleware:", middleware_paths)
 
         crawler.signals.send_catch_log(
             signal=signals.spider_opened,
             spider=spider
         )
 
-        print('!' * 30 )
-        print(response.__dict__)
-        print(response.request.__dict__)
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
         result = request.callback(response) or []
-        print([r for r in result])
         middlewares.reverse()
-
-        # self.set_spider_attrs(spider, data.get('spider_args_out'))
-        print('oooooo')
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
                 result = mw.process_spider_output(response, result, spider)
 
         crawler.signals.send_catch_log(
-           signal=signals.spider_closed,
-           spider=spider
+            signal=signals.spider_closed,
+            spider=spider
         )
         if isinstance(result, (Item, Request, dict)):
             result = [result]
 
-        print('*!' * 25)
-        print(request.__dict__)
-        print(spider.__dict__)
-        print(data['spider_args'])
-        print(data['spider_args_in'])
-        print(data['spider_args_out'])
-        # for l in data['traceback_out'].format():
-        #     print(l)
-        #     print('\n' * 2)
-        print('*' * 25)
-        result_attr ={
-                k: v for k, v in spider.__dict__.items()
-                if k not in ('crawler', 'settings', 'start_urls')
-            }
+        result_attr = {
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
         for index, _object in enumerate(result):
             fixture_data = fixture_objects[index]['data']
 
@@ -321,11 +289,7 @@ def test_generator(fixture_path):
             self.assertEqual(_object, '', 'Object')
             _object = parse_object(_object, spider)
 
-            #self.assertNotEqual(fixture_data, _object, 'Are equal!')
             self.assertEqual(fixture_data, _object, 'Not equal!')
 
-        #import pandas as pd
-        #print(pd.concat([pd.Series(result_attr).rename('result'), pd.Series(fixture_attr).rename('test_result')],axis=1))
         self.assertEqual(data['spider_args_out'], result_attr, 'Not equal!')
-        print(data['spider_args_out'], result_attr)
     return test
