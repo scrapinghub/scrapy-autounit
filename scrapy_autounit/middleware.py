@@ -15,6 +15,8 @@ from .utils import (
     create_dir,
 )
 
+import logging
+logger = logging.getLogger(__name__)
 
 def _copy_settings(settings):
     out = {}
@@ -63,13 +65,24 @@ class AutounitMiddleware:
         settings = spider.settings
         processed_result = []
         out = []
+        logger.info('REQUEST')
+        logger.info(response.meta['_autounit']['request'])
         for elem in result:
             out.append(elem)
             processed_result.append({
                 'type': 'request' if isinstance(elem, Request) else 'item',
                 'data': parse_object(elem, spider)
             })
+            if isinstance(elem, Request):
+                logger.info('STATUS')
+                logger.info(elem.__dict__)
+                logger.info(processed_result[-1])
+            else:
+                logger.info('ELEM')
+                logger.info(processed_result[-1])
 
+        logger.info("PROCESSED RESULT")
+        logger.info(processed_result)
         input_data = response.meta.pop('_autounit')
         request = input_data['request']
         callback_name = request['callback']
@@ -89,6 +102,7 @@ class AutounitMiddleware:
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],
         }
+        logger.info(data['result'])
         self.fixture_counters[callback_name] = (
             self.fixture_counters.setdefault(callback_name, 0) + 1)
         callback_counter = self.fixture_counters[callback_name]

@@ -21,6 +21,8 @@ from scrapy.utils.conf import (
     build_component_list,
 )
 
+import logging
+logger = logging.getLogger(__name__)
 
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
@@ -46,6 +48,8 @@ def get_middlewares(spider):
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
+    mw_paths = [mw for mw in full_list if mw != autounit_mw_path]
+    mw_paths = full_list
     return mw_paths
 
 
@@ -141,15 +145,22 @@ def parse_request(request, spider):
     for key, value in _request.get('meta').items():
         if key != '_autounit':
             _meta[key] = parse_object(value, spider)
-    _request['meta'] = _meta
 
+    _request['meta'] = _meta.copy()
+
+    logger.info('Prev req')
+    logger.info(_request)
     clean_request(_request, spider.settings)
 
+    logger.info("meta")
+    logger.info(_request)
+    logger.info(_request["url"])
+    logger.info(_meta)
     return _request
 
 
 def clean_request(request, settings):
-    _clean(request, settings, 'AUTOUNIT_REQUEST_SKIPPED_FIELDS')
+    return _clean(request.copy(), settings, 'AUTOUNIT_REQUEST_SKIPPED_FIELDS')
 
 
 def clean_headers(headers, settings):
@@ -169,12 +180,25 @@ def clean_item(item, settings):
 
 def _clean(data, settings, name):
     fields = settings.get(name, default=[])
+    if name == 'AUTOUNIT_REQUEST_SKIPPED_FIELDS':
+        logger.info('FIELDS')
+        logger.info(fields)
+
     for field in fields:
         data.pop(field, None)
+    return data
 
 
 def get_valid_identifier(name):
     return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
+
+
+def _clean_attr(spider_attr, _exclude_attr):
+    _re_exclude_attr = re.compile(r'|'.join(_exclude_attr))
+    _spider_attr = {k: v for k, v in spider_attr.items()
+                    if (k not in ['settings', 'crawler']
+                        and not _re_exclude_attr.findall(k))}
+    return _spider_attr
 
 
 def write_test(path, test_name, fixture_name):
@@ -231,16 +255,24 @@ def test_generator(fixture_path):
         settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
+    # print(data.get('spider_args_out'))
+    # for k, v in data.get('spider_args').items():
+    #     setattr(spider, k, v)
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
         global spider
         fixture_objects = data['result']
-
-        spider = set_spider_attrs(spider, data['spider_args'])
+        # print(data)
+        
+        # spider = set_spider_attrs(spider, data['spider_args'])
 
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
+        print('1\n')
+        print(request_to_dict(request, spider))
+        print(response.__dict__)
+        print('\\1\n')
 
         middlewares = []
         middleware_paths = data['middlewares']
@@ -252,6 +284,7 @@ def test_generator(fixture_path):
             except NotConfigured:
                 continue
             middlewares.append(mw)
+        print("Middleware:", middleware_paths)
 
         crawler.signals.send_catch_log(
             signal=signals.spider_opened,
@@ -262,34 +295,69 @@ def test_generator(fixture_path):
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
+        # print('!' * 30 )
+        # print(spider.__dict__, data['spider_args_in'])
         result = request.callback(response) or []
+        # print(vars(request.callback))
+
+        # print('CALLBACK')
+        # print(request.callback, vars(request.callback))
+        # print(spider.__dict__, data['spider_args_out'])
+        # print([r for r in result])
+        # Algo ocurre -> [r for r in result] elinima resultados y process_spider_output genera los atributos al hacer el print. Es como si algún middleware no hubiera sido ejectuado (autounit????)
         middlewares.reverse()
+        #crawler.signals.send_catch_log(
+        #   signal=signals.spider_closed,
+        #   spider=spider
+        # )
+        # print('*!' * 25)
+        # print(request.__dict__)
+        # print('!' * 30 )
+
+        # print(spider.__dict__, data['spider_args_out'])
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
-                result = mw.process_spider_output(response, result, spider)
+                # Making a copy ensures that the result and spider attributes are properly updated.
+                result = mw.process_spider_output(response, list(result), spider)
 
-        crawler.signals.send_catch_log(
-            signal=signals.spider_closed,
-            spider=spider
-        )
         if isinstance(result, (Item, Request, dict)):
             result = [result]
 
-        result_attr = {
-            k: v for k, v in spider.__dict__.items()
-            if k not in ('crawler', 'settings', 'start_urls')
-        }
+
+        # for l in data['traceback_out'].format():
+        #     print(l)
+        #     print('\n' * 2)
+        print('+*' * 25)
+        result_attr ={
+                k: v for k, v in spider.__dict__.items()
+                if k not in ('crawler', 'settings', 'start_urls')
+            }
+
+        print(fixture_objects)
+        object_list = []
+        # Could it be due to mangling???
         for index, _object in enumerate(result):
+            if index >= len(fixture_objects):
+                continue
             fixture_data = fixture_objects[index]['data']
 
             if fixture_objects[index].get('type') == 'request':
                 clean_request(fixture_data, settings)
             else:
                 clean_item(fixture_data, settings)
-            self.assertEqual(_object, '', 'Object')
             _object = parse_object(_object, spider)
-
-            self.assertEqual(fixture_data, _object, 'Not equal!')
+            # if isinstance(_object, Request):
+            #     clean_request(_object, settings)
+            # else:
+            #     clean_item(_object, settings)
+            # # self.assertEqual((_object, index, fixture_data), None, 'VALUES')
+            try:
+                self.assertNotEqual(fixture_data, _object, 'Not equal!')
+            except Exception as e:
+                print(str(e))
+            object_list.append(_object)
+            self.assertEqual(fixture_data, _object, 'Not equal!: %s, %s' %(index, object_list))
 
         self.assertEqual(data['spider_args_out'], result_attr, 'Not equal!')
+        print(data['spider_args_out'], result_attr)
     return test
