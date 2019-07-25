@@ -15,8 +15,6 @@ from .utils import (
     create_dir,
 )
 
-import logging
-logger = logging.getLogger(__name__)
 
 def _copy_settings(settings):
     out = {}
@@ -65,48 +63,35 @@ class AutounitMiddleware:
         settings = spider.settings
         processed_result = []
         out = []
-        logger.info('REQUEST')
-        logger.info(response.meta['_autounit']['request'])
         for elem in result:
             out.append(elem)
             processed_result.append({
                 'type': 'request' if isinstance(elem, Request) else 'item',
                 'data': parse_object(elem, spider)
             })
-            # if isinstance(elem, Request):
-            #     logger.info('STATUS')
-            #     logger.info(elem.__dict__)
-            #     logger.info(processed_result[-1])
-            # else:
-            #     logger.info('ELEM')
-            #     logger.info(processed_result[-1])
 
-
-        logger.info("PROCESSED RESULT")
         input_data = response.meta.pop('_autounit')
         request = input_data['request']
         callback_name = request['callback']
-        spider_attr = {
+        spider_attr_out = {
             k: v for k, v in spider.__dict__.items()
             if k not in ('crawler', 'settings', 'start_urls')
         }
 
-        logger.info(processed_result, spider_attr)
         data = {
             'spider_name': spider.name,
             'request': request,
             'response': input_data['response'],
-            'spider_args_out': spider_attr,
+            'spider_args_out': spider_attr_out,
             'result': processed_result,
             'spider_args_in': input_data['spider_args'],
             'spider_args': input_data['spider_args'],
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],
         }
-        logger.info(data)
-        self.fixture_counters[callback_name] = (
-            self.fixture_counters.setdefault(callback_name, 0) + 1)
-        callback_counter = self.fixture_counters[callback_name]
+
+        callback_counter = self.fixture_counters.setdefault(callback_name, 0)
+        self.fixture_counters[callback_name] += 1
 
         test_dir, test_name = get_or_create_test_dir(
             self.base_path,
@@ -116,7 +101,7 @@ class AutounitMiddleware:
         )
 
         if callback_counter < self.max_fixtures:
-            add_sample(callback_counter, test_dir, test_name, data)
+            add_sample(callback_counter + 1, test_dir, test_name, data)
         else:
             r = random.randint(0, callback_counter)
             if r < self.max_fixtures:

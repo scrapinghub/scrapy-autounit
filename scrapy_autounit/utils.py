@@ -21,9 +21,6 @@ from scrapy.utils.conf import (
     build_component_list,
 )
 
-import logging
-logger = logging.getLogger(__name__)
-
 
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
@@ -49,11 +46,6 @@ def get_middlewares(spider):
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
-    # mw_paths = [mw for mw in full_list[:start] if mw != autounit_mw_path]
-    # mw_paths = [mw for mw in full_list if mw != autounit_mw_path]
-    # mw_paths = full_list
-    logger.info('MW')
-    logger.info([mw for mw in mw_paths])
     return mw_paths
 
 
@@ -151,20 +143,12 @@ def parse_request(request, spider):
             _meta[key] = parse_object(value, spider)
 
     _request['meta'] = _meta.copy()
-
-    logger.info('Prev req')
-    logger.info(_request)
     clean_request(_request, spider.settings)
-
-    logger.info("meta")
-    logger.info(_request)
-    logger.info(_request["url"])
-    logger.info(_meta)
     return _request
 
 
 def clean_request(request, settings):
-    return _clean(request.copy(), settings, 'AUTOUNIT_REQUEST_SKIPPED_FIELDS')
+    _clean(request, settings, 'AUTOUNIT_REQUEST_SKIPPED_FIELDS')
 
 
 def clean_headers(headers, settings):
@@ -184,25 +168,12 @@ def clean_item(item, settings):
 
 def _clean(data, settings, name):
     fields = settings.get(name, default=[])
-    if name == 'AUTOUNIT_REQUEST_SKIPPED_FIELDS':
-        logger.info('FIELDS')
-        logger.info(fields)
-
     for field in fields:
         data.pop(field, None)
-    return data
 
 
 def get_valid_identifier(name):
     return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
-
-
-def _clean_attr(spider_attr, _exclude_attr):
-    _re_exclude_attr = re.compile(r'|'.join(_exclude_attr))
-    _spider_attr = {k: v for k, v in spider_attr.items()
-                    if (k not in ['settings', 'crawler']
-                        and not _re_exclude_attr.findall(k))}
-    return _spider_attr
 
 
 def write_test(path, test_name, fixture_name):
@@ -234,14 +205,7 @@ if __name__ == '__main__':
         f.write(test_code)
 
 
-def set_spider_attrs(spider, _args):
-    for k, v in _args.items():
-        setattr(spider, k, v)
-    return spider
-
-
 def test_generator(fixture_path):
-    global spider
     with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
@@ -259,25 +223,13 @@ def test_generator(fixture_path):
         settings.set(k, v, 50)
     spider = spider_cls(**data.get('spider_args'))
     spider.settings = settings
-    # print(data.get('spider_args_out'))
-    # for k, v in data.get('spider_args').items():
-    #     setattr(spider, k, v)
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
-        print('\n')
-        global spider
         fixture_objects = data['result']
-        # print(data)
-
-        spider = set_spider_attrs(spider, data['spider_args'])
 
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
-        print('1\n')
-        print(request_to_dict(request, spider))
-        print(response.__dict__)
-        print('\\1\n')
 
         middlewares = []
         middleware_paths = data['middlewares']
@@ -289,7 +241,6 @@ def test_generator(fixture_path):
             except NotConfigured:
                 continue
             middlewares.append(mw)
-        print("Middleware:", middleware_paths)
 
         crawler.signals.send_catch_log(
             signal=signals.spider_opened,
@@ -304,51 +255,35 @@ def test_generator(fixture_path):
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
-        # exec('spider.{}(response)'.format(request.callback.__name__))
         result = request.callback(response) or []
-        print(spider.__dict__)
 
         self.assertEqual(data['spider_args_in'], result_attr_in, 'Not equal!')
-        print(data['spider_args_in'], result_attr_in)
         middlewares.reverse()
-        print('o-' * 50)
-        _seen_mw = []
         for mw in middlewares:
-            _mw_name = type(mw).__name__
-            # and _mw_name not in _seen_mw:
-            if hasattr(mw, 'process_spider_output') and _mw_name not in _seen_mw:
-                # Making a copy ensures that the result and spider attributes are properly updated.
+            if hasattr(mw, 'process_spider_output'):
                 result = mw.process_spider_output(response, result, spider)
-                print('\n')
-                print(mw, mw.__dict__, type(mw).__name__)
-                _seen_mw.append(_mw_name)
 
-        crawler.stop()
         if isinstance(result, (Item, Request, dict)):
             result = [result]
-        # print(fixture_objects)
         object_list = []
-        # After making the yield -> it is when the spider attributes get updated
+        # Spider attributes get updated after the yield
         for index, _object in enumerate(result):
             fixture_data = fixture_objects[index]['data']
             if fixture_objects[index].get('type') == 'request':
                 clean_request(fixture_data, settings)
             else:
                 clean_item(fixture_data, settings)
+
             _object = parse_object(_object, spider)
             object_list.append(_object)
             self.assertEqual(fixture_data, _object,
                              'Not equal!: %s, %s' % (index, object_list))
-        print('+*' * 25)
-        result_attr = {
+
+        result_attr_out = {
             k: v for k, v in spider.__dict__.items()
             if k not in ('crawler', 'settings', 'start_urls')
         }
-        print(data['spider_args_out'], result_attr)
-        self.assertEqual(data['spider_args_out'], result_attr, 'Not equal!')
-        print('--' * 25)
-        print(data['spider_args_out'], data['spider_args'],
-              result_attr, result_attr_in)
-        print('\n' *2)
-        print('END')
+
+        self.assertEqual(data['spider_args_out'], result_attr_out, 'Not equal!'
+                         )
     return test
