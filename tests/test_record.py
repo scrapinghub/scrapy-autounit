@@ -198,17 +198,20 @@ class CaseSpider(object):
             stdout=subprocess.PIPE,
         )
         check_process('Unit tests failed!', result)
-        print_test_output(result)
         err = result['stderr'].decode('utf-8')
         num_tests = re.findall(r'Ran (\d+) test', err)
         is_ok = re.findall('OK$', err)
-        # print('\n'.join(itertree(self.dir)))
+        print_test_output(result)
         if (not is_ok or not num_tests or (
                 isinstance(num_tests, list) and int(num_tests[0]) == 0)):
-            raise AssertionError(
-                'No tests run!\nProject dir:\n{}'.format(
-                    '\n'.join(itertree(self.dir))
-                ))
+            if (not num_tests or (
+                    isinstance(num_tests, list) and int(num_tests[0]) == 0)):
+                raise AssertionError(
+                    'No tests run!\nProject dir:\n{}'.format(
+                        '\n'.join(itertree(self.dir))
+                    ))
+            else:
+                print_test_output(result)
 
 
 class TestRecording(unittest.TestCase):
@@ -260,16 +263,20 @@ class TestRecording(unittest.TestCase):
     def test_spider_attributes_recursive(self):
         with CaseSpider() as spider:
             spider.start_requests("""
+                self.__page = 0
+                self.param = 0
                 self._base_url = 'www.nothing.com'
                 yield scrapy.Request('data:text/plain,', callback=self.parse)
             """)
             spider.parse("""
-                self.param = 1
+                self.param += 1
                 yield from self.parse_item()
             """)
             spider.parse_item("""
                 print("-"*60)
-                self.__page = getattr(self, '_MySpider__page', 0) + 1
+                self.__page += 1 #getattr(self, '_MySpider__page', 0) + 1
+                # setattr(self, '_MySpider__page', getattr(self, '_MySpider__page', 0) + 1)# += 1 #getattr(self, '_MySpider__page', 0) + 1
+                # 
                 if self.__page > 3:
                     self.end = True
                     return {'a': 4}
@@ -279,11 +286,14 @@ class TestRecording(unittest.TestCase):
                 for i in range(3):
                     print('%s_%s;'%(self.__page, i))
                     yield {'a': '%s_%s;'%(self.__page, i)}
-
+                print('/' * 10)
+                print(self.__dict__)
+                print('/' * 10)
                 yield scrapy.Request('data:,%s;'%(self.__page),
                                       callback=self.parse)
                                          """)
             spider.record()
+            print('TESTING \n')
             spider.test()
             print(spider.spider_text)
             # traceback.print_exc(file=sys.stdout, capture_locals=True)

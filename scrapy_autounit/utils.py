@@ -24,6 +24,7 @@ from scrapy.utils.conf import (
 import logging
 logger = logging.getLogger(__name__)
 
+
 def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
     if closest_cfg:
@@ -48,8 +49,11 @@ def get_middlewares(spider):
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
-    mw_paths = [mw for mw in full_list if mw != autounit_mw_path]
-    mw_paths = full_list
+    # mw_paths = [mw for mw in full_list[:start] if mw != autounit_mw_path]
+    # mw_paths = [mw for mw in full_list if mw != autounit_mw_path]
+    # mw_paths = full_list
+    logger.info('MW')
+    logger.info([mw for mw in mw_paths])
     return mw_paths
 
 
@@ -261,11 +265,12 @@ def test_generator(fixture_path):
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
+        print('\n')
         global spider
         fixture_objects = data['result']
         # print(data)
-        
-        # spider = set_spider_attrs(spider, data['spider_args'])
+
+        spider = set_spider_attrs(spider, data['spider_args'])
 
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
@@ -290,74 +295,60 @@ def test_generator(fixture_path):
             signal=signals.spider_opened,
             spider=spider
         )
+        result_attr_in = {
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
-        # print('!' * 30 )
-        # print(spider.__dict__, data['spider_args_in'])
+        # exec('spider.{}(response)'.format(request.callback.__name__))
         result = request.callback(response) or []
-        # print(vars(request.callback))
+        print(spider.__dict__)
 
-        # print('CALLBACK')
-        # print(request.callback, vars(request.callback))
-        # print(spider.__dict__, data['spider_args_out'])
-        # print([r for r in result])
-        # Algo ocurre -> [r for r in result] elinima resultados y process_spider_output genera los atributos al hacer el print. Es como si algún middleware no hubiera sido ejectuado (autounit????)
+        self.assertEqual(data['spider_args_in'], result_attr_in, 'Not equal!')
+        print(data['spider_args_in'], result_attr_in)
         middlewares.reverse()
-        #crawler.signals.send_catch_log(
-        #   signal=signals.spider_closed,
-        #   spider=spider
-        # )
-        # print('*!' * 25)
-        # print(request.__dict__)
-        # print('!' * 30 )
-
-        # print(spider.__dict__, data['spider_args_out'])
+        print('o-' * 50)
+        _seen_mw = []
         for mw in middlewares:
-            if hasattr(mw, 'process_spider_output'):
+            _mw_name = type(mw).__name__
+            # and _mw_name not in _seen_mw:
+            if hasattr(mw, 'process_spider_output') and _mw_name not in _seen_mw:
                 # Making a copy ensures that the result and spider attributes are properly updated.
-                result = mw.process_spider_output(response, list(result), spider)
+                result = mw.process_spider_output(response, result, spider)
+                print('\n')
+                print(mw, mw.__dict__, type(mw).__name__)
+                _seen_mw.append(_mw_name)
 
+        crawler.stop()
         if isinstance(result, (Item, Request, dict)):
             result = [result]
-
-
-        # for l in data['traceback_out'].format():
-        #     print(l)
-        #     print('\n' * 2)
-        print('+*' * 25)
-        result_attr ={
-                k: v for k, v in spider.__dict__.items()
-                if k not in ('crawler', 'settings', 'start_urls')
-            }
-
-        print(fixture_objects)
+        # print(fixture_objects)
         object_list = []
-        # Could it be due to mangling???
+        # After making the yield -> it is when the spider attributes get updated
         for index, _object in enumerate(result):
-            if index >= len(fixture_objects):
-                continue
             fixture_data = fixture_objects[index]['data']
-
             if fixture_objects[index].get('type') == 'request':
                 clean_request(fixture_data, settings)
             else:
                 clean_item(fixture_data, settings)
             _object = parse_object(_object, spider)
-            # if isinstance(_object, Request):
-            #     clean_request(_object, settings)
-            # else:
-            #     clean_item(_object, settings)
-            # # self.assertEqual((_object, index, fixture_data), None, 'VALUES')
-            try:
-                self.assertNotEqual(fixture_data, _object, 'Not equal!')
-            except Exception as e:
-                print(str(e))
             object_list.append(_object)
-            self.assertEqual(fixture_data, _object, 'Not equal!: %s, %s' %(index, object_list))
-
-        self.assertEqual(data['spider_args_out'], result_attr, 'Not equal!')
+            self.assertEqual(fixture_data, _object,
+                             'Not equal!: %s, %s' % (index, object_list))
+        print('+*' * 25)
+        result_attr = {
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
         print(data['spider_args_out'], result_attr)
+        self.assertEqual(data['spider_args_out'], result_attr, 'Not equal!')
+        print('--' * 25)
+        print(data['spider_args_out'], data['spider_args'],
+              result_attr, result_attr_in)
+        print('\n' *2)
+        print('END')
     return test
