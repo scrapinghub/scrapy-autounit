@@ -299,13 +299,16 @@ class TestRecording(unittest.TestCase):
             """)
             spider.parse("""
                 self.param += 1
-                yield from self.parse_item()
+                reqs = self.parse_item()
+                for r in reqs:
+                    yield r
             """)
             spider.parse_item("""
                 self.__page += 1
                 if self.__page > 3:
                     self.end = True
-                    return {'a': 4}
+                    yield {'a': 4}
+                    return
                 for i in range(3):
                     yield {'b': '%s_%s;'%(self.__page, i)}
                 yield scrapy.Request('data:,%s;'%(self.__page),
@@ -323,13 +326,16 @@ class TestRecording(unittest.TestCase):
             """)
             spider.parse("""
                 self.param += 1
-                yield from self.parse_item()
+                reqs = self.parse_item()
+                for r in reqs:
+                    yield r
             """)
             spider.parse_item("""
                 self.__page = getattr(self, '_MySpider__page', 0) + 1
                 if self.__page > 3:
                     self.end = True
-                    return {'a': 4}
+                    yield {'a': 4}
+                    return
                 for i in range(3):
                     yield {'b': '%s_%s;'%(self.__page, i)}
                 yield scrapy.Request('data:,%s;'%(self.__page),
