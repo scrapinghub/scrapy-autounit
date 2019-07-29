@@ -31,7 +31,11 @@ class MySpider(scrapy.Spider):
 
 
 def run(*pargs, **kwargs):
-    proc = subprocess.run(*pargs, **kwargs)
+    try:
+        # Python3
+        proc = subprocess.run(*pargs, **kwargs)
+    except AttributeError:
+        proc = subprocess.check_output(*pargs, **kwargs)
     return {
         'returncode': proc.returncode,
         'stdout': proc.stdout,

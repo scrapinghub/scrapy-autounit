@@ -1,5 +1,5 @@
-import re
 import os
+import six
 import zlib
 import pickle
 from pathlib import Path
@@ -11,6 +11,7 @@ from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
 from scrapy.http import HtmlResponse, Request
+from scrapy.utils.python import to_bytes
 from scrapy.utils.reqser import request_to_dict, request_from_dict
 from scrapy.utils.spider import iter_spider_classes
 from scrapy.utils.project import get_project_settings
@@ -20,6 +21,9 @@ from scrapy.utils.conf import (
     closest_scrapy_cfg,
     build_component_list,
 )
+
+
+NO_ITEM_MARKER = object()
 
 
 def get_project_dir():
@@ -72,13 +76,14 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
 
 
 def add_sample(index, test_dir, test_name, data):
+    encoding = data['response']['encoding']
     fixture_name = 'fixture%s' % str(index)
     filename = fixture_name + '.bin'
     path = test_dir / filename
     data = compress_data(pickle_data(data))
     with open(str(path), 'wb') as outfile:
         outfile.write(data)
-    write_test(test_dir, test_name, fixture_name)
+    write_test(test_dir, test_name, fixture_name, encoding)
 
 
 def compress_data(data):
@@ -93,8 +98,10 @@ def pickle_data(data):
     return pickle.dumps(data, protocol=2)
 
 
-def unpickle_data(data):
-    return pickle.loads(data)
+def unpickle_data(data, encoding):
+    if six.PY2:
+        return pickle.loads(data)
+    return pickle.loads(data, encoding=encoding)
 
 
 def response_to_dict(response):
@@ -102,7 +109,7 @@ def response_to_dict(response):
         'url': response.url,
         'status': response.status,
         'body': response.body,
-        'headers': response.headers,
+        'headers': dict(response.headers),
         'flags': response.flags,
         'encoding': response.encoding,
     }
@@ -172,11 +179,7 @@ def _clean(data, settings, name):
         data.pop(field, None)
 
 
-def get_valid_identifier(name):
-    return re.sub('[^0-9a-zA-Z_]', '_', name.strip())
-
-
-def write_test(path, test_name, fixture_name):
+def write_test(path, test_name, fixture_name, encoding):
     test_path = path / ('test_%s.py' % (fixture_name))
 
     test_code = '''import unittest
@@ -190,7 +193,7 @@ class AutoUnit(unittest.TestCase):
         file_path = (
             Path(__file__).parent / '{fixture_name}.bin'
         )
-        test = test_generator(file_path.resolve())
+        test = test_generator(file_path.resolve(), '{encoding}')
         test(self)
 
 
@@ -199,17 +202,45 @@ if __name__ == '__main__':
 '''.format(
         test_name=test_name,
         fixture_name=fixture_name,
+        encoding=encoding,
     )
 
     with open(str(test_path), 'w') as f:
         f.write(test_code)
 
 
-def test_generator(fixture_path):
+def binary_check(fx_obj, cb_obj, encoding):
+    if isinstance(cb_obj, (dict, Item)):
+        fx_obj = {
+            key: binary_check(value, cb_obj[key], encoding)
+            for key, value in fx_obj.items()
+        }
+
+    if isinstance(cb_obj, list):
+        fx_obj = [
+            binary_check(fxitem, cbitem, encoding)
+            for fxitem, cbitem in zip(fx_obj, cb_obj)
+        ]
+
+    if isinstance(cb_obj, Request):
+        headers = {}
+        for key, value in fx_obj['headers'].items():
+            key = to_bytes(key, encoding)
+            headers[key] = [to_bytes(v, encoding) for v in value]
+        fx_obj['headers'] = headers
+        fx_obj['body'] = to_bytes(fx_obj['body'], encoding)
+
+    if isinstance(cb_obj, six.binary_type):
+        fx_obj = fx_obj.encode(encoding)
+
+    return fx_obj
+
+
+def test_generator(fixture_path, encoding):
     with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
-    data = unpickle_data(decompress_data(data))
+    data = unpickle_data(decompress_data(data), encoding)
 
     spider_name = data.get('spider_name')
     if not spider_name:  # legacy tests
@@ -226,7 +257,8 @@ def test_generator(fixture_path):
     crawler = Crawler(spider_cls, settings)
 
     def test(self):
-        fixture_objects = data['result']
+        fx_result = data['result']
+        fx_version = data['python_version']
 
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
@@ -265,20 +297,30 @@ def test_generator(fixture_path):
 
         if isinstance(result, (Item, Request, dict)):
             result = [result]
-        object_list = []
-        # Spider attributes get updated after the yield
-        for index, _object in enumerate(result):
-            fixture_data = fixture_objects[index]['data']
-            if fixture_objects[index].get('type') == 'request':
-                clean_request(fixture_data, settings)
+
+        for cb_obj, fx_item in six.moves.zip_longest(
+            result, fx_result, fillvalue=NO_ITEM_MARKER
+        ):
+            if any(item == NO_ITEM_MARKER for item in (cb_obj, fx_item)):
+                raise AssertionError(
+                    "The fixture's data length doesn't match with "
+                    "the current callback's output length."
+                )
+
+            fx_obj = fx_item['data']
+            if fx_item['type'] == 'request':
+                clean_request(fx_obj, settings)
             else:
-                clean_item(fixture_data, settings)
+                clean_item(fx_obj, settings)
 
-            _object = parse_object(_object, spider)
-            object_list.append(_object)
-            self.assertEqual(fixture_data, _object,
-                             'Not equal!: %s, %s' % (index, object_list))
+            if fx_version == 2 and six.PY3:
+                fx_obj = binary_check(fx_obj, cb_obj, encoding)
 
+            cb_obj = parse_object(cb_obj, spider)
+
+            self.assertEqual(fx_obj, cb_obj, 'Not equal!')
+
+        # Spider attributes get updated after the yield
         result_attr_out = {
             k: v for k, v in spider.__dict__.items()
             if k not in ('crawler', 'settings', 'start_urls')
