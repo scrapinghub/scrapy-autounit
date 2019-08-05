@@ -152,7 +152,9 @@ class CaseSpider(object):
         )
 
     def _reformat_custom_spider(self, string):
-        _text = re.sub(r'(class)([\w\s]{3,})(\()', r'\1 MySpider \3', string)
+        m = re.search(r'(?<=class )([\w\s]+)(?=\(.*\)\:)', string)
+        spider_name = m.group() if m else ''
+        _text = re.sub(re.escape(spider_name), r'MySpider', string)
         _text = re.sub(r'(name\s*\=\s*[\"\']+)(.*)([\"\']+)', r'\1myspider\3',
                        _text)
         _text = self._update_paths_in_text(_text)
@@ -391,7 +393,7 @@ class HijSpider(scrapy.Spider):
     )
 
     def __init__(self, *pargs, **kwargs):
-        super().__init__(*pargs, **kwargs)
+        super(HijSpider, self).__init__(*pargs, **kwargs) # py 2.7 compatible
         self.i = 0
 
     def start_requests(self):
