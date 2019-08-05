@@ -238,7 +238,7 @@ def binary_check(fx_obj, cb_obj, encoding):
     return fx_obj
 
 
-def test_generator(fixture_path, encoding):
+def test_generator(fixture_path, encoding='utf-8'):
     with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
@@ -260,7 +260,7 @@ def test_generator(fixture_path, encoding):
 
     def test(self):
         fx_result = data['result']
-        fx_version = data['python_version']
+        fx_version = data.get('python_version')
 
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
