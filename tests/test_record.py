@@ -139,16 +139,40 @@ class CaseSpider(object):
     def __exit__(self, exc_type, exc_value, traceback):
         shutil.rmtree(self.dir)
 
+    @property
+    def spider_text(self):
+        return self._spider_text
+
+    def set_spider_text(self):
+        self._spider_text = SPIDER_TEMPLATE.format(
+            start_requests=self._start_requests,
+            parse=self._parse,
+            parse_item=self._parse_item,
+            autonit_module_path=self.autounit_module_path,
+        )
+
     def start_requests(self, string):
         self._start_requests = string
+        self.set_spider_text()
         self._write_spider()
 
     def parse(self, string):
         self._parse = string
+        self.set_spider_text()
         self._write_spider()
 
     def parse_item(self, string):
         self._parse_item = string
+        self.set_spider_text()
+        self._write_spider()
+
+    def _write_generic_spider(self, string):
+        # Override the value in set_spider_text in order to have
+        # generic spiders
+        self._spider_text = string
+        # Avoid error raised for the spider with template in self.record
+        self._start_requests = True
+        self._parse  = True
         self._write_spider()
 
     def _write_spider(self):
@@ -157,12 +181,6 @@ class CaseSpider(object):
         if not os.path.exists(spider_folder):
             os.mkdir(spider_folder)
         with open(os.path.join(spider_folder, 'myspider.py'), 'w') as dest:
-            self.spider_text = SPIDER_TEMPLATE.format(
-                start_requests=self._start_requests,
-                parse=self._parse,
-                parse_item=self._parse_item,
-                autonit_module_path=self.autounit_module_path,
-            )
             dest.write(self.spider_text)
         with open(os.path.join(spider_folder, '__init__.py'), 'w') as dest:
             dest.write("")
@@ -183,7 +201,7 @@ class CaseSpider(object):
                 with open(d, 'w') as dest:
                     dest.write(file_text)
 
-    def record(self, args=None, settings=None):
+    def record(self, args=None, settings=None, record_verbosity=True):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -207,10 +225,12 @@ class CaseSpider(object):
             stderr=subprocess.PIPE,
         )
         check_process('Running spider failed!', result)
+        if record_verbosity:
+            print_test_output(result)
         if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
 
-    def test(self, test_verbosity=False):
+    def test(self, test_verbosity=True):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -343,3 +363,37 @@ class TestRecording(unittest.TestCase):
                                          """)
             spider.record()
             spider.test()
+
+        # Recursive calls including private variables using getattr
+        with CaseSpider() as spider:
+            spider._write_generic_spider("""
+import scrapy
+
+
+class HijSpider(scrapy.Spider):
+    name = 'hij'
+
+    def __init__(self, *pargs, **kwargs):
+        super().__init__(*pargs, **kwargs)
+        self.i = 0
+
+    def start_requests(self):
+        yield self.next_req()
+
+    def next_req(self):
+        self.i += 1
+        return scrapy.Request('data:text/plain,hi', dont_filter=True)
+
+    def parse(self, response):
+        print('i {}'.format(self.i))
+        if self.i < 3:
+            yield self.next_req()
+
+                """)
+            spider.record(record_verbosity=True)
+            spider.test(test_verbosity=True)
+
+
+
+
+
