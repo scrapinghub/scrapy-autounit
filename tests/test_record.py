@@ -151,6 +151,17 @@ class CaseSpider(object):
             autonit_module_path=self.autounit_module_path,
         )
 
+    def _reformat_custom_spider(self, string):
+        _text = re.sub(r'(class)([\w\s]{3,})(\()', r'\1 MySpider \3', string)
+        _text = re.sub(r'(name\s*\=\s*[\"\']+)(.*)([\"\']+)', r'\1myspider\3', _text)
+        _text = self._update_paths_in_text(_text)
+        return _text
+
+    def _update_paths_in_text(self, string):
+        for k, v in self.autounit_paths_update.items():
+            string = string.replace(k, v)
+        return string
+
     def start_requests(self, string):
         self._start_requests = string
         self.set_spider_text()
@@ -169,10 +180,10 @@ class CaseSpider(object):
     def _write_generic_spider(self, string):
         # Override the value in set_spider_text in order to have
         # generic spiders
-        self._spider_text = string
+        self._spider_text = self._reformat_custom_spider(string)
         # Avoid error raised for the spider with template in self.record
         self._start_requests = True
-        self._parse  = True
+        self._parse = True
         self._write_spider()
 
     def _write_spider(self):
@@ -182,6 +193,7 @@ class CaseSpider(object):
             os.mkdir(spider_folder)
         with open(os.path.join(spider_folder, 'myspider.py'), 'w') as dest:
             dest.write(self.spider_text)
+            print(self.spider_text)
         with open(os.path.join(spider_folder, '__init__.py'), 'w') as dest:
             dest.write("")
 
@@ -196,8 +208,7 @@ class CaseSpider(object):
                 d = os.path.join(mw_folder, item)
                 with open(s, 'r') as file:
                     file_text = file.read()
-                for k, v in self.autounit_paths_update.items():
-                    file_text = file_text.replace(k, v)
+                file_text = self._update_paths_in_text(file_text)
                 with open(d, 'w') as dest:
                     dest.write(file_text)
 
@@ -372,6 +383,12 @@ import scrapy
 
 class HijSpider(scrapy.Spider):
     name = 'hij'
+
+    custom_settings = dict(
+        SPIDER_MIDDLEWARES={
+            'myproject.middleware.AutounitMiddleware': 950,
+        }
+    )
 
     def __init__(self, *pargs, **kwargs):
         super().__init__(*pargs, **kwargs)
