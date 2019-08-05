@@ -4,6 +4,7 @@ from pathlib import Path
 
 from scrapy.http import Request
 from scrapy.exceptions import NotConfigured
+from scrapy.commands.genspider import sanitize_module_name
 
 from .utils import (
     add_sample,
@@ -91,7 +92,7 @@ class AutounitMiddleware:
 
         test_dir, test_name = get_or_create_test_dir(
             self.base_path,
-            spider.name,
+            sanitize_module_name(spider.name),
             callback_name,
             settings.get('AUTOUNIT_EXTRA_PATH'),
         )

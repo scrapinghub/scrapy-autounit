@@ -10,7 +10,7 @@ import scrapy
 
 
 class MySpider(scrapy.Spider):
-    name = 'myspider'
+    name = '{name}'
 
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
@@ -29,11 +29,14 @@ class MySpider(scrapy.Spider):
 def run(*pargs, **kwargs):
     proc = subprocess.Popen(*pargs, **kwargs)
     proc.wait()
-    return {
+    out = {
         'returncode': proc.returncode,
         'stdout': proc.stdout.read(),
         'stderr': proc.stderr.read(),
     }
+    proc.stderr.close()
+    proc.stdout.close()
+    return out
 
 
 def indent(string):
@@ -55,6 +58,12 @@ def check_process(message, result):
     process_error(message, result)
 
 
+def itertree(root):
+    for root, dirs, files in os.walk(root):
+        for f in files:
+            yield os.path.join(root, f)
+
+
 class CaseSpider(object):
     def __init__(self):
         self.dir = tempfile.mkdtemp()
@@ -66,6 +75,7 @@ class CaseSpider(object):
             dest.write('SPIDER_MODULES = ["myproject"]\n')
         self._start_requests = None
         self._parse = None
+        self._spider_name = 'myspider'
 
     def __enter__(self):
         return self
@@ -73,17 +83,19 @@ class CaseSpider(object):
     def __exit__(self, exc_type, exc_value, traceback):
         shutil.rmtree(self.dir)
 
+    def name(self, string):
+        self._spider_name = string
+
     def start_requests(self, string):
         self._start_requests = string
-        self._write_spider()
 
     def parse(self, string):
         self._parse = string
-        self._write_spider()
 
     def _write_spider(self):
         with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
             dest.write(SPIDER_TEMPLATE.format(
+                name=self._spider_name,
                 start_requests=self._start_requests,
                 parse=self._parse
             ))
@@ -91,11 +103,12 @@ class CaseSpider(object):
     def record(self, args=None, settings=None):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
+        self._write_spider()
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         command_args = [
-            'scrapy', 'crawl', 'myspider',
+            'scrapy', 'crawl', self._spider_name,
             '-s', 'AUTOUNIT_ENABLED=1',
         ]
         for k, v in (args or {}).items():
@@ -112,7 +125,7 @@ class CaseSpider(object):
             stderr=subprocess.PIPE
         )
         check_process('Running spider failed!', result)
-        if not os.path.exists(os.path.join(self.dir, 'autounit')):
+        if not next(itertree(self.dir + '/autounit'), None):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
@@ -132,13 +145,9 @@ class CaseSpider(object):
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
         if 'Ran 1 test' not in err:
-            def itertree():
-                for root, dirs, files in os.walk(self.dir):
-                    for f in files:
-                        yield os.path.join(root, f)
             raise AssertionError(
                 'No tests run!\nProject dir:\n{}'.format(
-                    '\n'.join(itertree())
+                    '\n'.join(itertree(self.dir))
                 ))
 
 
@@ -159,4 +168,19 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             ''')
             spider.record(settings=dict(AUTOUNIT_EXTRA_PATH='abc'))
+            spider.test()
+
+    def test_empty(self):
+        with CaseSpider() as spider:
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('pass')
+            spider.record()
+            spider.test()
+
+    def test_dotted_name(self):
+        with CaseSpider() as spider:
+            spider.name('my.spider')
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('pass')
+            spider.record()
             spider.test()
