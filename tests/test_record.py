@@ -153,7 +153,8 @@ class CaseSpider(object):
 
     def _reformat_custom_spider(self, string):
         _text = re.sub(r'(class)([\w\s]{3,})(\()', r'\1 MySpider \3', string)
-        _text = re.sub(r'(name\s*\=\s*[\"\']+)(.*)([\"\']+)', r'\1myspider\3', _text)
+        _text = re.sub(r'(name\s*\=\s*[\"\']+)(.*)([\"\']+)', r'\1myspider\3',
+                       _text)
         _text = self._update_paths_in_text(_text)
         return _text
 
@@ -193,7 +194,6 @@ class CaseSpider(object):
             os.mkdir(spider_folder)
         with open(os.path.join(spider_folder, 'myspider.py'), 'w') as dest:
             dest.write(self.spider_text)
-            print(self.spider_text)
         with open(os.path.join(spider_folder, '__init__.py'), 'w') as dest:
             dest.write("")
 
@@ -212,7 +212,7 @@ class CaseSpider(object):
                 with open(d, 'w') as dest:
                     dest.write(file_text)
 
-    def record(self, args=None, settings=None, record_verbosity=True):
+    def record(self, args=None, settings=None, record_verbosity=False):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -375,7 +375,7 @@ class TestRecording(unittest.TestCase):
             spider.record()
             spider.test()
 
-        # Recursive calls including private variables using getattr
+        # Testing spider with rescursive spiders
         with CaseSpider() as spider:
             spider._write_generic_spider("""
 import scrapy
@@ -407,10 +407,5 @@ class HijSpider(scrapy.Spider):
             yield self.next_req()
 
                 """)
-            spider.record(record_verbosity=True)
-            spider.test(test_verbosity=True)
-
-
-
-
-
+            spider.record()
+            spider.test()

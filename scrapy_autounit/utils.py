@@ -236,6 +236,11 @@ def binary_check(fx_obj, cb_obj, encoding):
     return fx_obj
 
 
+def set_spider_attrs(spider, _args):
+    for k, v in _args.items():
+        setattr(spider, k, v)
+
+
 def test_generator(fixture_path, encoding):
     with open(str(fixture_path), 'rb') as f:
         data = f.read()
@@ -260,6 +265,7 @@ def test_generator(fixture_path, encoding):
         fx_result = data['result']
         fx_version = data['python_version']
 
+        set_spider_attrs(spider, data.get('spider_args_in'))
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
 
@@ -282,6 +288,7 @@ def test_generator(fixture_path, encoding):
             k: v for k, v in spider.__dict__.items()
             if k not in ('crawler', 'settings', 'start_urls')
         }
+        self.assertEqual(data['spider_args_in'], result_attr_in, 'Not equal!')
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
@@ -289,7 +296,6 @@ def test_generator(fixture_path, encoding):
 
         result = request.callback(response) or []
 
-        self.assertEqual(data['spider_args_in'], result_attr_in, 'Not equal!')
         middlewares.reverse()
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
