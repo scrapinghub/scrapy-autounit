@@ -26,6 +26,12 @@ def _copy_settings(settings):
 
 class AutounitMiddleware:
     def __init__(self, settings):
+        if not any(
+            type(self).__name__ in s
+            for s in settings.getwithbase('SPIDER_MIDDLEWARES').keys()
+        ):
+            raise ValueError(
+                '%s must be in SPIDER_MIDDLEWARES' % (type(self).__name__,))
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
 
