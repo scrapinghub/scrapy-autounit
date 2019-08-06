@@ -31,39 +31,12 @@ class MySpider(scrapy.Spider):
 
 
 def run(*pargs, **kwargs):
-    try:
-        process = subprocess.run(*pargs, **kwargs)
-        return {
-            'returncode': process.returncode,
-            'stdout': process.stdout,
-            'stderr': process.stderr,
-        }
-    except AttributeError:
-        input = kwargs.pop('input', None)
-        check = kwargs.pop('check', False)
-        # Python 2.7 compatibility
-        if input is not None:
-            if 'stdin' in kwargs:
-                raise ValueError(
-                    'stdin and input arguments may not both be used.')
-            kwargs['stdin'] = subprocess.PIPE
-
-        process = subprocess.Popen(*pargs, **kwargs)
-        try:
-            stdout, stderr = process.communicate(input)
-        except Exception:
-            process.kill()
-            process.wait()
-            raise
-        retcode = process.poll()
-        if check and retcode:
-            raise subprocess.CalledProcessError(
-                retcode, process.args, output=stdout, stderr=stderr)
-        return {
-            'returncode': retcode,
-            'stdout': stdout,
-            'stderr': stderr,
-        }
+    process = subprocess.run(*pargs, **kwargs)
+    return {
+        'returncode': process.returncode,
+        'stdout': process.stdout,
+        'stderr': process.stderr,
+    }
 
 
 def indent(string):

@@ -149,7 +149,7 @@ def parse_request(request, spider):
         if key != '_autounit':
             _meta[key] = parse_object(value, spider)
 
-    _request['meta'] = _meta.copy()
+    _request['meta'] = _meta
     clean_request(_request, spider.settings)
     return _request
 
@@ -257,7 +257,7 @@ def test_generator(fixture_path, encoding):
     spider_cls.update_settings(settings)
     for k, v in data.get('settings', {}).items():
         settings.set(k, v, 50)
-    spider = spider_cls(**data.get('spider_args'))
+    spider = spider_cls(**data.get('spider_args_in'))
     spider.settings = settings
     crawler = Crawler(spider_cls, settings)
 
