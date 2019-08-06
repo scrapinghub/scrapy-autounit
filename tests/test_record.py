@@ -29,14 +29,11 @@ class MySpider(scrapy.Spider):
 def run(*pargs, **kwargs):
     proc = subprocess.Popen(*pargs, **kwargs)
     proc.wait()
-    out = {
+    return {
         'returncode': proc.returncode,
         'stdout': proc.stdout.read(),
         'stderr': proc.stderr.read(),
     }
-    proc.stderr.close()
-    proc.stdout.close()
-    return out
 
 
 def indent(string):
@@ -56,12 +53,6 @@ def check_process(message, result):
     if result['returncode'] == 0:
         return
     process_error(message, result)
-
-
-def itertree(root):
-    for root, dirs, files in os.walk(root):
-        for f in files:
-            yield os.path.join(root, f)
 
 
 class CaseSpider(object):
@@ -125,7 +116,7 @@ class CaseSpider(object):
             stderr=subprocess.PIPE
         )
         check_process('Running spider failed!', result)
-        if not next(itertree(self.dir + '/autounit'), None):
+        if not os.path.exists(os.path.join(self.dir, 'autounit')):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
@@ -145,9 +136,13 @@ class CaseSpider(object):
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
         if 'Ran 1 test' not in err:
+            def itertree():
+                for root, dirs, files in os.walk(self.dir):
+                    for f in files:
+                        yield os.path.join(root, f)
             raise AssertionError(
                 'No tests run!\nProject dir:\n{}'.format(
-                    '\n'.join(itertree(self.dir))
+                    '\n'.join(itertree())
                 ))
 
 
