@@ -254,9 +254,8 @@ def test_generator(fixture_path, encoding):
     spider_cls.update_settings(settings)
     for k, v in data.get('settings', {}).items():
         settings.set(k, v, 50)
-    spider = spider_cls(**data.get('spider_args'))
-    spider.settings = settings
     crawler = Crawler(spider_cls, settings)
+    spider = spider_cls.from_crawler(crawler, **data.get('spider_args'))
 
     def test(self):
         fx_result = data['result']
