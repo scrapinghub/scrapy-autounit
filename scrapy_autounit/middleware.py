@@ -1,6 +1,7 @@
 import six
 import random
 from pathlib import Path
+import logging
 
 from scrapy.http import Request
 from scrapy.exceptions import NotConfigured
@@ -16,6 +17,8 @@ from .utils import (
     create_dir,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _copy_settings(settings):
     out = {}
@@ -28,6 +31,12 @@ class AutounitMiddleware:
     def __init__(self, settings):
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
+        if settings.getint('CONCURRENT_REQUESTS') > 1:
+            logger.warn(
+                'Recording with concurrency > 1! '
+                'Data races in shared object modification may create broken '
+                'tests.'
+            )
 
         self.max_fixtures = settings.getint(
             'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
