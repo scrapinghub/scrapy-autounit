@@ -29,11 +29,14 @@ class MySpider(scrapy.Spider):
 def run(*pargs, **kwargs):
     proc = subprocess.Popen(*pargs, **kwargs)
     proc.wait()
-    return {
+    out = {
         'returncode': proc.returncode,
         'stdout': proc.stdout.read(),
         'stderr': proc.stderr.read(),
     }
+    proc.stderr.close()
+    proc.stdout.close()
+    return out
 
 
 def indent(string):
