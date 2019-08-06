@@ -240,7 +240,7 @@ def set_spider_attrs(spider, _args):
     for k, v in _args.items():
         setattr(spider, k, v)
 
-        
+
 def test_generator(fixture_path, encoding='utf-8'):
 
     with open(str(fixture_path), 'rb') as f:
