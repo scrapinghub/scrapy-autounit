@@ -15,7 +15,12 @@ from scrapy.utils.python import to_bytes
 from scrapy.utils.reqser import request_to_dict, request_from_dict
 from scrapy.utils.spider import iter_spider_classes
 from scrapy.utils.project import get_project_settings
-from scrapy.utils.misc import walk_modules, load_object, create_instance
+from scrapy.utils.misc import (
+    walk_modules,
+    load_object,
+    create_instance,
+    arg_to_iter,
+)
 from scrapy.utils.conf import (
     init_env,
     closest_scrapy_cfg,
@@ -284,15 +289,12 @@ def test_generator(fixture_path, encoding='utf-8'):
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
-        result = request.callback(response) or []
+        result = arg_to_iter(request.callback(response))
         middlewares.reverse()
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
                 result = mw.process_spider_output(response, result, spider)
-
-        if isinstance(result, (Item, Request, dict)):
-            result = [result]
 
         for cb_obj, fx_item in six.moves.zip_longest(
             result, fx_result, fillvalue=NO_ITEM_MARKER
