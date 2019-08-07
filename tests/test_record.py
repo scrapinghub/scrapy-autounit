@@ -112,7 +112,10 @@ class CaseSpider(object):
             stderr=subprocess.PIPE
         )
         check_process('Running spider failed!', result)
-        if not os.path.exists(os.path.join(self.dir, 'autounit')):
+        if not any(
+            any(f.endswith('.py') and f != '__init__.py' for f in files)
+            for _, _, files in os.walk(os.path.join(self.dir, 'autounit'))
+        ):
             process_error('No autounit tests recorded!', result)
 
     def test(self):
