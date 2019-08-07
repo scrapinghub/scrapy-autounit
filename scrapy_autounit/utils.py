@@ -274,7 +274,6 @@ def test_generator(fixture_path, encoding='utf-8'):
                 middlewares.append(mw)
             except NotConfigured:
                 continue
-            middlewares.append(mw)
 
         crawler.signals.send_catch_log(
             signal=signals.spider_opened,
