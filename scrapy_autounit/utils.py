@@ -256,6 +256,7 @@ def test_generator(fixture_path, encoding='utf-8'):
         settings.set(k, v, 50)
     crawler = Crawler(spider_cls, settings)
     spider = spider_cls.from_crawler(crawler, **data.get('spider_args'))
+    crawler.spider = spider
 
     def test(self):
         fx_result = data['result']
