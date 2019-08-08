@@ -208,6 +208,7 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
             spider.parse('''
+                time.sleep(0.5)
                 yield {'a': 4, 'ts': time.time()}
             ''')
             spider.record()
