@@ -135,11 +135,6 @@ def get_spider_class(spider_name, project_settings):
 def parse_object(_object, spider):
     if isinstance(_object, Request):
         return parse_request(_object, spider)
-
-    if isinstance(_object, (dict, Item)):
-        _object = _object.copy()
-        clean_item(_object, spider.settings)
-
     return _object
 
 
@@ -155,8 +150,6 @@ def parse_request(request, spider):
         if key != '_autounit':
             _meta[key] = parse_object(value, spider)
     _request['meta'] = _meta
-
-    clean_request(_request, spider.settings)
 
     return _request
 
@@ -176,7 +169,6 @@ def clean_headers(headers, settings):
 
 
 def clean_item(item, settings):
-    _clean(item, settings, 'AUTOUNIT_EXCLUDED_FIELDS')
     _clean(item, settings, 'AUTOUNIT_SKIPPED_FIELDS')
 
 
@@ -305,16 +297,18 @@ def test_generator(fixture_path, encoding='utf-8'):
                     "the current callback's output length."
                 )
 
+            cb_obj = parse_object(cb_obj, spider)
+
             fx_obj = fx_item['data']
             if fx_item['type'] == 'request':
                 clean_request(fx_obj, settings)
+                clean_request(cb_obj, settings)
             else:
                 clean_item(fx_obj, settings)
+                clean_item(cb_obj, settings)
 
             if fx_version == 2 and six.PY3:
                 fx_obj = binary_check(fx_obj, cb_obj, encoding)
-
-            cb_obj = parse_object(cb_obj, spider)
 
             self.assertEqual(fx_obj, cb_obj, 'Not equal!')
 
