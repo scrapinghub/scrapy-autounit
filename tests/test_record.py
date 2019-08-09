@@ -3,10 +3,12 @@ import tempfile
 import subprocess
 import os
 import shutil
+import re
 
 
 SPIDER_TEMPLATE = '''
 import scrapy
+{imports}
 
 
 class MySpider(scrapy.Spider):
@@ -15,7 +17,8 @@ class MySpider(scrapy.Spider):
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
             'scrapy_autounit.AutounitMiddleware': 950,
-        }}
+        }},
+        {custom_settings}
     )
 
     def start_requests(self):
@@ -70,12 +73,20 @@ class CaseSpider(object):
         self._start_requests = None
         self._parse = None
         self._spider_name = 'myspider'
+        self._imports = ''
+        self._custom_settings = ''
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         shutil.rmtree(self.dir)
+
+    def imports(self, string):
+        self._imports = string
+
+    def custom_settings(self, string):
+        self._custom_settings = string
 
     def name(self, string):
         self._spider_name = string
@@ -91,7 +102,9 @@ class CaseSpider(object):
             dest.write(SPIDER_TEMPLATE.format(
                 name=self._spider_name,
                 start_requests=self._start_requests,
-                parse=self._parse
+                parse=self._parse,
+                imports=self._imports,
+                custom_settings=self._custom_settings,
             ))
 
     def record(self, args=None, settings=None):
@@ -141,7 +154,8 @@ class CaseSpider(object):
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
-        if 'Ran 1 test' not in err:
+        tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
+        if tests_ran == '0':
             def itertree():
                 for root, dirs, files in os.walk(self.dir):
                     for f in files:
@@ -183,5 +197,37 @@ class TestRecording(unittest.TestCase):
             spider.name('my.spider')
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
             spider.parse('pass')
+            spider.record()
+            spider.test()
+
+    def test_skipped_fields(self):
+        with CaseSpider() as spider:
+            spider.imports('import time')
+            spider.custom_settings('''
+                AUTOUNIT_SKIPPED_FIELDS = ['ts']
+            ''')
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('''
+                time.sleep(0.5)
+                yield {'a': 4, 'ts': time.time()}
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_request_skipped_fields(self):
+        with CaseSpider() as spider:
+            spider.imports('import random')
+            spider.custom_settings('''
+                AUTOUNIT_REQUEST_SKIPPED_FIELDS = ['url']
+            ''')
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('''
+                yield {'a': 4}
+                if not response.meta.get('done'):
+                    yield scrapy.Request(
+                        'data:text/plain,%s' % random.random(),
+                        meta={'done': True}
+                    )
+            ''')
             spider.record()
             spider.test()
