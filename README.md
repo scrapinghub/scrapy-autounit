@@ -89,6 +89,14 @@ Each time you want to regenerate your tests (e.g.: due to changes in your spider
 
 - Autounit uses an internal `_autounit` key in requests' meta dictionaries. Avoid using/overriding this key in your spiders when adding data to meta to prevent unexpected behaviours.  
 
+
+## Troubleshooting
+- **Pytest fails with `fixture 'fixture_path' not found`**  
+This problem occurs in versions prior to 0.0.19 due to a naming issue in the generated tests.  
+If you have tests generated with scrapy-autounit <= 0.0.18, you can update scrapy-autounit to 0.0.19 and run the `autounit-update` command line tool (without any argument).  
+This will update your already generated tests and fix the naming issue without you having to regenerate all of them again; then you can run `pytest` as you normally would.
+
+
 ## Settings
 
 **AUTOUNIT_ENABLED**  

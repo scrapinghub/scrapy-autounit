@@ -183,7 +183,7 @@ def write_test(path, test_name, fixture_name, encoding):
 
     test_code = '''import unittest
 from pathlib import Path
-from scrapy_autounit.utils import test_generator
+from scrapy_autounit.utils import generate_test
 
 
 class AutoUnit(unittest.TestCase):
@@ -192,7 +192,7 @@ class AutoUnit(unittest.TestCase):
         file_path = (
             Path(__file__).parent / '{fixture_name}.bin'
         )
-        test = test_generator(file_path.resolve(), '{encoding}')
+        test = generate_test(file_path.resolve(), '{encoding}')
         test(self)
 
 
@@ -235,7 +235,7 @@ def binary_check(fx_obj, cb_obj, encoding):
     return fx_obj
 
 
-def test_generator(fixture_path, encoding='utf-8'):
+def generate_test(fixture_path, encoding='utf-8'):
     with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
