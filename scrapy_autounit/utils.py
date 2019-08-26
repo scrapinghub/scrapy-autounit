@@ -18,7 +18,6 @@ from scrapy.utils.project import get_project_settings
 from scrapy.utils.misc import (
     walk_modules,
     load_object,
-    create_instance,
     arg_to_iter,
 )
 from scrapy.utils.conf import (
@@ -29,6 +28,19 @@ from scrapy.utils.conf import (
 
 
 NO_ITEM_MARKER = object()
+
+
+def create_instance(objcls, settings, crawler, *args, **kwargs):
+    if settings is None:
+        if crawler is None:
+            raise ValueError("Specifiy at least one of settings and crawler.")
+        settings = crawler.settings
+    if crawler and hasattr(objcls, 'from_crawler'):
+        return objcls.from_crawler(crawler, *args, **kwargs)
+    elif hasattr(objcls, 'from_settings'):
+        return objcls.from_settings(settings, *args, **kwargs)
+    else:
+        return objcls(*args, **kwargs)
 
 
 def get_project_dir():
