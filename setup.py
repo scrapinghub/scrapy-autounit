@@ -21,9 +21,4 @@ setuptools.setup(
     install_requires=[
         'pathlib',
     ],
-    entry_points={
-        'console_scripts': [
-            'autounit-update=scrapy_autounit.commands:update'
-        ],
-    }
 )
