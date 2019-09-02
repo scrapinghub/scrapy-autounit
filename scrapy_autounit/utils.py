@@ -326,8 +326,10 @@ def generate_test(fixture_path, encoding='utf-8'):
             try:
                 datadiff.tools.assert_equal(fx_obj, cb_obj)
             except AssertionError as e:
-                raise AssertionError(
-                    "Callback output #{} doesn't match recorded "
-                    "output:{}".format(index, e))
+                six.raise_from(
+                    AssertionError(
+                        "Callback output #{} doesn't match recorded "
+                        "output:{}".format(index, e)),
+                    None)
 
     return test
