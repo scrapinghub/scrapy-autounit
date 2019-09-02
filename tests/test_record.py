@@ -231,3 +231,29 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.record()
             spider.test()
+
+    def test_nested_request_in_output(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                )
+            ''')
+            spider.parse('''
+                yield {'data': response.request}
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_nested_response_in_output(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                )
+            ''')
+            spider.parse('''
+                yield {'data': response}
+            ''')
+            spider.record()
+            spider.test()
