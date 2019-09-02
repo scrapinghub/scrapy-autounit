@@ -15,7 +15,7 @@ class MySpider(scrapy.Spider):
 
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
-            '{autonit_module_path}': 950,
+            '{autonit_modqule_path}': 950,
         }}
     )
 
@@ -31,12 +31,16 @@ class MySpider(scrapy.Spider):
 
 
 def run(*pargs, **kwargs):
-    process = subprocess.run(*pargs, **kwargs)
-    return {
-        'returncode': process.returncode,
-        'stdout': process.stdout,
-        'stderr': process.stderr,
+    proc = subprocess.Popen(*pargs, **kwargs)
+    proc.wait()
+    out = {
+        'returncode': proc.returncode,
+        'stdout': proc.stdout.read(),
+        'stderr': proc.stderr.read(),
     }
+    proc.stderr.close()
+    proc.stdout.close()
+    return out
 
 
 def indent(string):
@@ -377,7 +381,6 @@ class HijSpider(scrapy.Spider):
         return scrapy.Request('data:text/plain,hi', dont_filter=True)
 
     def parse(self, response):
-        print('i {}'.format(self.i))
         if self.i < 3:
             yield self.next_req()
 
