@@ -25,6 +25,7 @@ from scrapy.utils.conf import (
     closest_scrapy_cfg,
     build_component_list,
 )
+import datadiff.tools
 
 
 NO_ITEM_MARKER = object()
@@ -300,9 +301,9 @@ def generate_test(fixture_path, encoding='utf-8'):
             if hasattr(mw, 'process_spider_output'):
                 result = mw.process_spider_output(response, result, spider)
 
-        for cb_obj, fx_item in six.moves.zip_longest(
+        for index, (cb_obj, fx_item) in enumerate(six.moves.zip_longest(
             result, fx_result, fillvalue=NO_ITEM_MARKER
-        ):
+        )):
             if any(item == NO_ITEM_MARKER for item in (cb_obj, fx_item)):
                 raise AssertionError(
                     "The fixture's data length doesn't match with "
@@ -322,6 +323,11 @@ def generate_test(fixture_path, encoding='utf-8'):
             if fx_version == 2 and six.PY3:
                 fx_obj = binary_check(fx_obj, cb_obj, encoding)
 
-            self.assertEqual(fx_obj, cb_obj, 'Not equal!')
+            try:
+                datadiff.tools.assert_equal(fx_obj, cb_obj)
+            except AssertionError as e:
+                raise AssertionError(
+                    "Callback output #{} doesn't match recorded "
+                    "output:{}".format(index, e))
 
     return test
