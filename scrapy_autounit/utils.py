@@ -1,29 +1,38 @@
 import os
-import six
-import zlib
 import pickle
-from pathlib import Path
-from itertools import islice
+import zlib
 from importlib import import_module
+from itertools import islice
+from pathlib import Path
 
+import six
 from scrapy import signals
-from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
 from scrapy.http import HtmlResponse, Request
-from scrapy.utils.python import to_bytes
-from scrapy.utils.reqser import request_to_dict, request_from_dict
-from scrapy.utils.spider import iter_spider_classes
+from scrapy.item import Item
+from scrapy.utils.conf import (build_component_list, closest_scrapy_cfg,
+                               init_env)
+from scrapy.utils.misc import arg_to_iter, load_object, walk_modules
 from scrapy.utils.project import get_project_settings
-from scrapy.utils.misc import walk_modules, load_object, create_instance
-from scrapy.utils.conf import (
-    init_env,
-    closest_scrapy_cfg,
-    build_component_list,
-)
-
+from scrapy.utils.python import to_bytes
+from scrapy.utils.reqser import request_from_dict, request_to_dict
+from scrapy.utils.spider import iter_spider_classes
 
 NO_ITEM_MARKER = object()
+
+
+def create_instance(objcls, settings, crawler, *args, **kwargs):
+    if settings is None:
+        if crawler is None:
+            raise ValueError("Specifiy at least one of settings and crawler.")
+        settings = crawler.settings
+    if crawler and hasattr(objcls, 'from_crawler'):
+        return objcls.from_crawler(crawler, *args, **kwargs)
+    elif hasattr(objcls, 'from_settings'):
+        return objcls.from_settings(settings, *args, **kwargs)
+    else:
+        return objcls(*args, **kwargs)
 
 
 def get_project_dir():
@@ -129,11 +138,6 @@ def get_spider_class(spider_name, project_settings):
 def parse_object(_object, spider):
     if isinstance(_object, Request):
         return parse_request(_object, spider)
-
-    if isinstance(_object, (dict, Item)):
-        _object = _object.copy()
-        clean_item(_object, spider.settings)
-
     return _object
 
 
@@ -149,8 +153,6 @@ def parse_request(request, spider):
         if key != '_autounit':
             _meta[key] = parse_object(value, spider)
 
-    _request['meta'] = _meta
-    clean_request(_request, spider.settings)
     return _request
 
 
@@ -169,7 +171,6 @@ def clean_headers(headers, settings):
 
 
 def clean_item(item, settings):
-    _clean(item, settings, 'AUTOUNIT_EXCLUDED_FIELDS')
     _clean(item, settings, 'AUTOUNIT_SKIPPED_FIELDS')
 
 
@@ -184,7 +185,7 @@ def write_test(path, test_name, fixture_name, encoding):
 
     test_code = '''import unittest
 from pathlib import Path
-from scrapy_autounit.utils import test_generator
+from scrapy_autounit.utils import generate_test
 
 
 class AutoUnit(unittest.TestCase):
@@ -193,7 +194,7 @@ class AutoUnit(unittest.TestCase):
         file_path = (
             Path(__file__).parent / '{fixture_name}.bin'
         )
-        test = test_generator(file_path.resolve(), '{encoding}')
+        test = generate_test(file_path.resolve(), '{encoding}')
         test(self)
 
 
@@ -241,8 +242,7 @@ def set_spider_attrs(spider, _args):
         setattr(spider, k, v)
 
 
-def test_generator(fixture_path, encoding='utf-8'):
-
+def generate_test(fixture_path, encoding='utf-8'):
     with open(str(fixture_path), 'rb') as f:
         data = f.read()
 
@@ -258,9 +258,10 @@ def test_generator(fixture_path, encoding='utf-8'):
     spider_cls.update_settings(settings)
     for k, v in data.get('settings', {}).items():
         settings.set(k, v, 50)
-    spider = spider_cls(**data.get('spider_args_in'))
-    spider.settings = settings
+
     crawler = Crawler(spider_cls, settings)
+    spider = spider_cls.from_crawler(crawler, **data.get('spider_args_in'))
+    crawler.spider = spider
 
     def test(self):
         fx_result = data['result']
@@ -279,7 +280,6 @@ def test_generator(fixture_path, encoding='utf-8'):
                 middlewares.append(mw)
             except NotConfigured:
                 continue
-            middlewares.append(mw)
 
         crawler.signals.send_catch_log(
             signal=signals.spider_opened,
@@ -295,15 +295,12 @@ def test_generator(fixture_path, encoding='utf-8'):
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
-        result = request.callback(response) or []
-
+        result = arg_to_iter(request.callback(response))
         middlewares.reverse()
+
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
                 result = mw.process_spider_output(response, result, spider)
-
-        if isinstance(result, (Item, Request, dict)):
-            result = [result]
 
         for cb_obj, fx_item in six.moves.zip_longest(
             result, fx_result, fillvalue=NO_ITEM_MARKER
@@ -314,16 +311,18 @@ def test_generator(fixture_path, encoding='utf-8'):
                     "the current callback's output length."
                 )
 
+            cb_obj = parse_object(cb_obj, spider)
+
             fx_obj = fx_item['data']
             if fx_item['type'] == 'request':
                 clean_request(fx_obj, settings)
+                clean_request(cb_obj, settings)
             else:
                 clean_item(fx_obj, settings)
+                clean_item(cb_obj, settings)
 
             if fx_version == 2 and six.PY3:
                 fx_obj = binary_check(fx_obj, cb_obj, encoding)
-
-            cb_obj = parse_object(cb_obj, spider)
 
             self.assertEqual(fx_obj, cb_obj, 'Not equal!')
 

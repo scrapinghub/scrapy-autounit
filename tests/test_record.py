@@ -1,22 +1,23 @@
-import unittest
-import tempfile
-import subprocess
 import os
-import shutil
 import re
+import shutil
+import subprocess
+import tempfile
+import unittest
 
 SPIDER_TEMPLATE = '''
 import scrapy
-import traceback, sys
+{imports}
 
 
 class MySpider(scrapy.Spider):
-    name = 'myspider'
+    name = '{name}'
 
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
-            '{autonit_modqule_path}': 950,
-        }}
+            '{autonit_module_path}': 950,
+        }},
+        {custom_settings}
     )
 
     def start_requests(self):
@@ -109,6 +110,9 @@ class CaseSpider(object):
         self._start_requests = None
         self._parse = None
         self._parse_item = None
+        self._spider_name = 'myspider'
+        self._imports = ''
+        self._custom_settings = ''
 
     def __enter__(self):
         return self
@@ -122,11 +126,32 @@ class CaseSpider(object):
 
     def set_spider_text(self):
         self._spider_text = SPIDER_TEMPLATE.format(
+            name=self._spider_name,
             start_requests=self._start_requests,
             parse=self._parse,
             parse_item=self._parse_item,
+            imports=self._imports,
+            custom_settings=self._custom_settings,
             autonit_module_path=self.autounit_module_path,
         )
+
+    def imports(self, string):
+        self._imports = string
+
+    def custom_settings(self, string):
+        self._custom_settings = string
+
+    def name(self, string):
+        self._spider_name = string
+
+    def start_requests(self, string):
+        self._start_requests = string
+
+    def parse(self, string):
+        self._parse = string
+
+    def parse_item(self, string):
+        self._parse_item = string
 
     def _reformat_custom_spider(self, string):
         m = re.search(r'(?<=class )([\w\s]+)(?=\(.*\)\:)', string)
@@ -141,21 +166,6 @@ class CaseSpider(object):
         for k, v in self.autounit_paths_update.items():
             string = string.replace(k, v)
         return string
-
-    def start_requests(self, string):
-        self._start_requests = string
-        self.set_spider_text()
-        self._write_spider()
-
-    def parse(self, string):
-        self._parse = string
-        self.set_spider_text()
-        self._write_spider()
-
-    def parse_item(self, string):
-        self._parse_item = string
-        self.set_spider_text()
-        self._write_spider()
 
     def _write_generic_spider(self, string):
         # Override the value in set_spider_text in order to have
@@ -192,13 +202,15 @@ class CaseSpider(object):
                     dest.write(file_text)
 
     def record(self, args=None, settings=None, record_verbosity=False):
+        self.set_spider_text()
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
+        self._write_spider()
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         command_args = [
-            'scrapy', 'crawl', 'myspider',
+            'scrapy', 'crawl', self._spider_name,
             '-s', 'AUTOUNIT_ENABLED=1',
         ]
         for k, v in (args or {}).items():
@@ -217,7 +229,10 @@ class CaseSpider(object):
         check_process('Running spider failed!', result)
         if record_verbosity:
             print_test_output(result)
-        if not os.path.exists(os.path.join(self.dir, 'autounit')):
+        if not any(
+            any(f.endswith('.py') and f != '__init__.py' for f in files)
+            for _, _, files in os.walk(os.path.join(self.dir, 'autounit'))
+        ):
             process_error('No autounit tests recorded!', result)
 
     def test(self, test_verbosity=True):
@@ -236,14 +251,15 @@ class CaseSpider(object):
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
-        num_tests = re.findall(r'Ran (\d+) test', err)
+        tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
+
         is_ok = re.findall('OK$', err)
         if test_verbosity:
             print_test_output(result)
-        if (not is_ok or not num_tests or (
-                isinstance(num_tests, list) and int(num_tests[0]) == 0)):
-            if (not num_tests or (
-                    isinstance(num_tests, list) and int(num_tests[0]) == 0)):
+        if (not is_ok or not tests_ran or (
+                isinstance(tests_ran, list) and int(tests_ran[0]) == 0)):
+            if (not tests_ran or (
+                    isinstance(tests_ran, list) and int(tests_ran[0]) == 0)):
                 raise AssertionError(
                     'No tests run!\nProject dir:\n{}'.format(
                         '\n'.join(itertree(self.dir))
@@ -385,5 +401,50 @@ class HijSpider(scrapy.Spider):
             yield self.next_req()
 
                 """)
+
+    def test_empty(self):
+        with CaseSpider() as spider:
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('pass')
+            spider.record()
+            spider.test()
+
+    def test_dotted_name(self):
+        with CaseSpider() as spider:
+            spider.name('my.spider')
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('pass')
+            spider.record()
+            spider.test()
+
+    def test_skipped_fields(self):
+        with CaseSpider() as spider:
+            spider.imports('import time')
+            spider.custom_settings('''
+                AUTOUNIT_SKIPPED_FIELDS = ['ts']
+            ''')
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('''
+                time.sleep(0.5)
+                yield {'a': 4, 'ts': time.time()}
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_request_skipped_fields(self):
+        with CaseSpider() as spider:
+            spider.imports('import random')
+            spider.custom_settings('''
+                AUTOUNIT_REQUEST_SKIPPED_FIELDS = ['url']
+            ''')
+            spider.start_requests("yield scrapy.Request('data:text/plain,')")
+            spider.parse('''
+                yield {'a': 4}
+                if not response.meta.get('done'):
+                    yield scrapy.Request(
+                        'data:text/plain,%s' % random.random(),
+                        meta={'done': True}
+                    )
+            ''')
             spider.record()
             spider.test()
