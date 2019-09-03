@@ -69,7 +69,7 @@ class AutounitMiddleware:
     def process_spider_input(self, response, spider):
         filter_args = {'crawler', 'settings', 'start_urls'}
         if isinstance(spider, CrawlSpider):
-            filter_args.add('_rules')
+            filter_args |= {'rules', '_rules'}
         response.meta['_autounit'] = {
             'request': parse_request(response.request, spider),
             'response': response_to_dict(response),
