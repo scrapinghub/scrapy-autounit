@@ -10,7 +10,7 @@ from scrapy import signals
 from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
-from scrapy.http import HtmlResponse, Request
+from scrapy.http import HtmlResponse, Request, Response
 from scrapy.utils.python import to_bytes
 from scrapy.utils.reqser import request_to_dict, request_from_dict
 from scrapy.utils.spider import iter_spider_classes
@@ -148,7 +148,14 @@ def get_spider_class(spider_name, project_settings):
 def parse_object(_object, spider):
     if isinstance(_object, Request):
         return parse_request(_object, spider)
-    return _object
+    elif isinstance(_object, Response):
+        return parse_object(response_to_dict(_object), spider)
+    elif isinstance(_object, dict):
+        return {k: parse_object(v, spider) for k, v in _object.items()}
+    elif isinstance(_object, (list, tuple)):
+        return [parse_object(v, spider) for v in _object]
+    else:
+        return _object
 
 
 def parse_request(request, spider):
