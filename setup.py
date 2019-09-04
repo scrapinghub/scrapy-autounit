@@ -20,5 +20,6 @@ setuptools.setup(
     ],
     install_requires=[
         'pathlib',
+        'datadiff==2.0.0',
     ],
 )
