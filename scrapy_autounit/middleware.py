@@ -6,6 +6,7 @@ import logging
 from scrapy.http import Request
 from scrapy.exceptions import NotConfigured
 from scrapy.commands.genspider import sanitize_module_name
+from scrapy.spiders import CrawlSpider
 
 from .utils import (
     add_sample,
@@ -66,12 +67,15 @@ class AutounitMiddleware:
         return cls(crawler.settings)
 
     def process_spider_input(self, response, spider):
+        filter_args = {'crawler', 'settings', 'start_urls'}
+        if isinstance(spider, CrawlSpider):
+            filter_args |= {'rules', '_rules'}
         response.meta['_autounit'] = {
             'request': parse_request(response.request, spider),
             'response': response_to_dict(response),
             'spider_args': {
                 k: v for k, v in spider.__dict__.items()
-                if k not in ('crawler', 'settings', 'start_urls')
+                if k not in filter_args
             },
             'middlewares': get_middlewares(spider),
         }
