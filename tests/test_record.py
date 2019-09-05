@@ -256,10 +256,8 @@ class CaseSpider(object):
         is_ok = re.findall('OK$', err)
         if test_verbosity:
             print_test_output(result)
-        if (not is_ok or not tests_ran or (
-                isinstance(tests_ran, list) and int(tests_ran[0]) == 0)):
-            if (not tests_ran or (
-                    isinstance(tests_ran, list) and int(tests_ran[0]) == 0)):
+        if not is_ok or not tests_ran:
+            if not tests_ran:
                 raise AssertionError(
                     'No tests run!\nProject dir:\n{}'.format(
                         '\n'.join(itertree(self.dir))
@@ -445,6 +443,32 @@ class HijSpider(scrapy.Spider):
                         'data:text/plain,%s' % random.random(),
                         meta={'done': True}
                     )
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_nested_request_in_output(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                )
+            ''')
+            spider.parse('''
+                yield {'data': response.request}
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_nested_response_in_output(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                )
+            ''')
+            spider.parse('''
+                yield {'data': response}
             ''')
             spider.record()
             spider.test()
