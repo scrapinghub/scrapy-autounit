@@ -62,6 +62,7 @@ def get_middlewares(spider):
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
+
     return mw_paths
 
 
@@ -164,6 +165,7 @@ def parse_request(request, spider):
         if key != '_autounit':
             _meta[key] = parse_object(value, spider)
     _request['meta'] = _meta
+
     return _request
 
 
