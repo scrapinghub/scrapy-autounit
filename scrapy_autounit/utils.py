@@ -223,6 +223,9 @@ class AutoUnit(unittest.TestCase):
             file_path = (
                 Path(__file__).parent / f
             )
+            print(
+                "Writing test '{test_name}' for fixture '{fixture_name}'"
+                " in file %s" %f)
             test = generate_test(file_path.resolve(), '{encoding}')
             test(self)
 
