@@ -126,14 +126,14 @@ class CaseSpider(object):
 
     def set_spider_text(self):
         self._spider_text = SPIDER_TEMPLATE.format(
-            name=self._spider_name,
-            start_requests=self._start_requests,
-            parse=self._parse,
-            parse_item=self._parse_item,
-            imports=self._imports,
-            custom_settings=self._custom_settings,
-            autonit_module_path=self.autounit_module_path,
-        )
+                name=self._spider_name,
+                start_requests=self._start_requests,
+                parse=self._parse,
+                parse_item=self._parse_item,
+                imports=self._imports,
+                custom_settings=self._custom_settings,
+                autonit_module_path=self.autounit_module_path,
+            )
 
     def imports(self, string):
         self._imports = string
@@ -153,28 +153,10 @@ class CaseSpider(object):
     def parse_item(self, string):
         self._parse_item = string
 
-    def _reformat_custom_spider(self, string):
-        m = re.search(r'(?<=class )([\w\s]+)(?=\(.*\)\:)', string)
-        spider_name = m.group() if m else ''
-        _text = re.sub(re.escape(spider_name), r'MySpider', string)
-        _text = re.sub(r'(name\s*\=\s*[\"\']+)(.*)([\"\']+)', r'\1myspider\3',
-                       _text)
-        _text = self._update_paths_in_text(_text)
-        return _text
-
     def _update_paths_in_text(self, string):
         for k, v in self.autounit_paths_update.items():
             string = string.replace(k, v)
         return string
-
-    def _write_generic_spider(self, string):
-        # Override the value in set_spider_text in order to have
-        # generic spiders
-        self._spider_text = self._reformat_custom_spider(string)
-        # Avoid error raised for the spider with template in self.record
-        self._start_requests = True
-        self._parse = True
-        self._write_spider()
 
     def _write_spider(self):
         spider_folder = os.path.join(self.proj_dir, 'spiders')
@@ -367,38 +349,6 @@ class TestRecording(unittest.TestCase):
                                          """)
             spider.record()
             spider.test()
-
-        # Testing spider with rescursive spiders
-        with CaseSpider() as spider:
-            spider._write_generic_spider("""
-import scrapy
-
-
-class HijSpider(scrapy.Spider):
-    name = 'hij'
-
-    custom_settings = dict(
-        SPIDER_MIDDLEWARES={
-            'myproject.middleware.AutounitMiddleware': 950,
-        }
-    )
-
-    def __init__(self, *pargs, **kwargs):
-        super(HijSpider, self).__init__(*pargs, **kwargs) # py 2.7 compatible
-        self.i = 0
-
-    def start_requests(self):
-        yield self.next_req()
-
-    def next_req(self):
-        self.i += 1
-        return scrapy.Request('data:text/plain,hi', dont_filter=True)
-
-    def parse(self, response):
-        if self.i < 3:
-            yield self.next_req()
-
-                """)
 
     def test_empty(self):
         with CaseSpider() as spider:

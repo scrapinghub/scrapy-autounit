@@ -280,14 +280,17 @@ def generate_test(fixture_path, encoding='utf-8'):
         settings.set(k, v, 50)
 
     crawler = Crawler(spider_cls, settings)
-    spider = spider_cls.from_crawler(crawler, **data.get('spider_args_in'))
+    spider_args_in = data.get('spider_args', data.get('spider_args_in', {}))
+    spider = spider_cls.from_crawler(crawler, **spider_args_in)
     crawler.spider = spider
 
     def test(self):
         fx_result = data['result']
         fx_version = data.get('python_version')
 
-        set_spider_attrs(spider, data.get('spider_args_in'))
+        spider_args_in = data.get(
+            'spider_args', data.get('spider_args_in', {}))
+        set_spider_attrs(spider, spider_args_in)
         request = request_from_dict(data['request'], spider)
         response = HtmlResponse(request=request, **data['response'])
 
@@ -309,7 +312,7 @@ def generate_test(fixture_path, encoding='utf-8'):
             k: v for k, v in spider.__dict__.items()
             if k not in ('crawler', 'settings', 'start_urls')
         }
-        self.assertEqual(data['spider_args_in'], result_attr_in, 'Not equal!')
+        self.assertEqual(spider_args_in, result_attr_in, 'Not equal!')
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
