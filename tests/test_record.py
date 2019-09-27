@@ -350,6 +350,23 @@ class TestRecording(unittest.TestCase):
             spider.record()
             spider.test()
 
+        # Recursive calls including private variables using getattr
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self.page_number = 0
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                self.page_number += 1
+                yield {
+                    'page_number': self.page_number
+                }
+                if self.page_number < 3:
+                    yield scrapy.Request('data:text/plain,', dont_filter=True)
+            """)
+            spider.record()
+            spider.test()
+
     def test_empty(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
