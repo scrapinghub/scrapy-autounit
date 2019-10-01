@@ -110,8 +110,15 @@ def handle_path(path):
 
 def get_data(path):
     with open(path, 'rb') as f:
-        raw = f.read()
-    data = unpickle_data(decompress_data(raw), 'utf-8')  # FIXME: encoding
+        raw_data = f.read()
+
+    fixture_info = unpickle_data(decompress_data(raw_data), 'utf-8')
+    if 'fixture_version' in fixture_info:
+        encoding = fixture_info['encoding']
+        data = unpickle_data(fixture_info['data'], encoding)
+    else:
+        data = fixture_info  # legacy tests (not all will work, just utf-8)
+
     return parse_data(data)
 
 
