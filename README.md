@@ -4,7 +4,7 @@ Scrapy Autounit is an automatic test generation tool for your Scrapy spiders.
 
 ## How it works?
 
-Scrapy Autounit generates test fixtures and tests cases as you run your spiders.
+Scrapy Autounit generates test fixtures and tests cases as you run your spiders.  
 The test fixtures are generated from the items and requests that your spider yields, then the test cases evaluate those fixtures against your spiders' callbacks.
 
 Scrapy Autounit generates fixtures and tests per spider and callback under the Scrapy project root directory.  
@@ -128,3 +128,57 @@ This is an extra string element to add to the test path and name between the spi
 
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.
+
+## Inspecting Data
+
+To inspect the data recorded in the binary fixtures you can use `autounit-inspect` command line tool.  
+
+##### Usage
+
+It has 2 ways of usage, passing a full path to the fixture we want to inspect with the `-p` argument:
+```
+$ autounit-inspect -p /path/to/your/fixtureN.bin
+```
+Or passing the spider, callback and fixture name you want to inspect:
+```
+$ autounit-inspect -s my_spider -c my_callback -f fixture3
+```
+The fixture can also be passed as a number indicating which fixture number to inspect like this:
+```
+$ autounit-inspect -s my_spider -c my_callback -f 3
+```
+
+##### Extracted Data
+Any of these commands return a JSON object that can be parsed with tools like `jq` to inspect specific blocks of data.  
+
+The top-level keys of the JSON output are:  
+
+***spider_name***  
+The name of the spider.  
+
+***request***  
+The original request that triggered the callback.  
+
+***response***  
+The response obtained from the original request and passed to the callback.  
+
+***result***  
+The callback's output such as items and requests.  
+
+***middlewares***  
+The relevant middlewares to replicate when running the tests.  
+
+***settings***  
+The settings explicitly recorded by the *`AUTOUNIT_INCLUDED_SETTINGS`* setting.  
+
+***spider_args***  
+The arguments passed to the spider in the crawl.  
+
+***python_version***  
+Indicates if the fixture was recorded in python 2 or 3.  
+
+---
+Then for example, to inspect a fixture's specific request we can do the following:
+```
+$ autounit-inspect -s my_spider -c my_callback -f 4 | jq '.request'
+```
