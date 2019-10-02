@@ -1,12 +1,9 @@
-import os
 import sys
 import json
-import scrapy
 import argparse
-import platform
 from pathlib import Path
 from scrapy.utils.project import inside_project
-from scrapy.utils.python import to_unicode, to_bytes
+from scrapy.utils.python import to_unicode
 from scrapy_autounit.utils import (
     unpickle_data,
     decompress_data,

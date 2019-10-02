@@ -132,6 +132,7 @@ This is an extra string element to add to the test path and name between the spi
 ## Inspecting Data
 
 To inspect the data recorded in the binary fixtures you can use `autounit-inspect` command line tool.  
+It's highly recommended that your fixtures were generated with scrapy-autounit 0.0.22 or higher to use this tool.  
 
 ##### Usage
 
