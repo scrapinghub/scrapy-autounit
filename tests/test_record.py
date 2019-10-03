@@ -20,6 +20,9 @@ class MySpider(scrapy.Spider):
         {custom_settings}
     )
 
+    def __init__(self, *args, **kwargs):
+       {init} 
+        
     def start_requests(self):
         {start_requests}
 
@@ -107,6 +110,7 @@ class CaseSpider(object):
             'scrapy_autounit.utils': self.autounit_utils_path,
         }
         self._write_mw()
+        self._init = "pass"
         self._start_requests = None
         self._parse = None
         self._parse_item = None
@@ -127,6 +131,7 @@ class CaseSpider(object):
     def set_spider_text(self):
         self._spider_text = SPIDER_TEMPLATE.format(
                 name=self._spider_name,
+                init=self._init,
                 start_requests=self._start_requests,
                 parse=self._parse,
                 parse_item=self._parse_item,
@@ -134,6 +139,7 @@ class CaseSpider(object):
                 custom_settings=self._custom_settings,
                 autonit_module_path=self.autounit_module_path,
             )
+        print(self._spider_text)
 
     def imports(self, string):
         self._imports = string
@@ -143,6 +149,9 @@ class CaseSpider(object):
 
     def name(self, string):
         self._spider_name = string
+
+    def init(self, string):
+        self._init = string
 
     def start_requests(self, string):
         self._start_requests = string
@@ -352,8 +361,10 @@ class TestRecording(unittest.TestCase):
 
         # Recursive calls including private variables using getattr
         with CaseSpider() as spider:
-            spider.start_requests("""
+            spider.init("""
                 self.page_number = 0
+            """)
+            spider.start_requests("""
                 yield scrapy.Request('data:text/plain,')
             """)
             spider.parse("""
