@@ -266,7 +266,6 @@ class TestRecording(unittest.TestCase):
             spider.record()
             spider.test()
 
-
     def test_reference_preservation(self):
         with CaseSpider() as spider:
             spider.start_requests('''
