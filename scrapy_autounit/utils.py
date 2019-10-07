@@ -153,11 +153,12 @@ def parse_object(_object, spider):
     elif isinstance(_object, Response):
         return parse_object(response_to_dict(_object), spider)
     elif isinstance(_object, dict):
-        return {k: parse_object(v, spider) for k, v in _object.items()}
+        for k, v in _object.items():
+            _object[k] = parse_object(v, spider)
     elif isinstance(_object, (list, tuple)):
-        return [parse_object(v, spider) for v in _object]
-    else:
-        return _object
+        for i, v in enumerate(_object):
+            _object[i] = parse_object(v, spider)
+    return _object
 
 
 def parse_request(request, spider):
