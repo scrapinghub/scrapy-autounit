@@ -22,4 +22,7 @@ setuptools.setup(
         'pathlib',
         'datadiff==2.0.0',
     ],
+    entry_points = {
+        'console_scripts': ['autounit-inspect=scrapy_autounit.inspect:main'],
+    },
 )
