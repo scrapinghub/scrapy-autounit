@@ -1,4 +1,5 @@
 import os
+import re
 import six
 import sys
 import zlib
@@ -11,7 +12,7 @@ from scrapy import signals
 from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
-from scrapy.http import HtmlResponse, Request, Response
+from scrapy.http import HtmlResponse, Request, Response, XmlResponse
 from scrapy.utils.python import to_bytes
 from scrapy.utils.reqser import request_to_dict, request_from_dict
 from scrapy.utils.spider import iter_spider_classes
@@ -289,7 +290,11 @@ def generate_test(fixture_path, encoding='utf-8'):
         fx_version = data.get('python_version')
 
         request = request_from_dict(data['request'], spider)
-        response = HtmlResponse(request=request, **data['response'])
+        if re.findall(r'text\/html', request.headers['Accept'].decode('utf8')):
+            response = HtmlResponse(request=request, **data['response'])
+        elif re.findall(r'text\/xml',
+                        request.headers['Accept'].decode('utf8')):
+            response = XmlResponse(request=request, **data['response'])
 
         middlewares = []
         middleware_paths = data['middlewares']

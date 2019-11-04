@@ -257,3 +257,43 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.record()
             spider.test()
+
+    def test_html_response(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/html,'
+                    '<div><link><p>text_html</p></link></div>'
+                )
+            ''')
+            spider.parse('''
+                yield {
+                    'v': response.css('div > link > p::text').get()
+                }
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_xml_response(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/xml,'
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                        <note>
+                            <to>Scrapinghub</to>
+                            <from>Somebody</from>
+                            <heading>Reminder</heading>
+                            <body>Newsletter...</body>
+                            </note>
+                    """ 
+                )
+            ''')
+            spider.parse('''
+                yield {
+                    'v': response.css('div > link > p::text').get()
+                }
+            ''')
+            spider.record()
+            spider.test()
