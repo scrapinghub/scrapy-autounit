@@ -30,6 +30,7 @@ import datadiff.tools
 
 
 NO_ITEM_MARKER = object()
+FIXTURE_VERSION = 1
 
 
 def create_instance(objcls, settings, crawler, *args, **kwargs):
@@ -100,7 +101,12 @@ def add_sample(index, test_dir, test_name, data):
     encoding = data['response']['encoding']
     filename = 'fixture%s.bin' % str(index)
     path = test_dir / filename
-    data = compress_data(pickle_data(data))
+    info = pickle_data({
+        'data': pickle_data(data),
+        'encoding': encoding,
+        'fixture_version': FIXTURE_VERSION,
+    })
+    data = compress_data(info)
     with open(str(path), 'wb') as outfile:
         outfile.write(data)
     if index == 1:
@@ -200,7 +206,7 @@ def _clean(data, settings, name):
         data.pop(field, None)
 
 
-def write_test(path, test_name, fixture_name, encoding, url):
+def write_test(path, test_name, fixture_name, url):
     command = 'scrapy {}'.format(' '.join(sys.argv))
     test_path = path / ('test_%s.py' % (fixture_name))
 
@@ -233,7 +239,6 @@ if __name__ == '__main__':
 '''.format(
         test_name=test_name,
         fixture_name=fixture_name,
-        encoding=encoding,
         command=command,
         url=url,
     )
@@ -271,9 +276,14 @@ def binary_check(fx_obj, cb_obj, encoding):
 
 def generate_test(fixture_path, encoding='utf-8'):
     with open(str(fixture_path), 'rb') as f:
-        data = f.read()
+        raw_data = f.read()
 
-    data = unpickle_data(decompress_data(data), encoding)
+    fixture_info = unpickle_data(decompress_data(raw_data), encoding)
+    if 'fixture_version' in fixture_info:
+        encoding = fixture_info['encoding']
+        data = unpickle_data(fixture_info['data'], encoding)
+    else:
+        data = fixture_info  # legacy tests
 
     spider_name = data.get('spider_name')
     if not spider_name:  # legacy tests
