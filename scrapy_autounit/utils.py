@@ -290,11 +290,15 @@ def generate_test(fixture_path, encoding='utf-8'):
         fx_version = data.get('python_version')
 
         request = request_from_dict(data['request'], spider)
-        if re.findall(r'text\/html', request.headers['Accept'].decode('utf8')):
-            response = HtmlResponse(request=request, **data['response'])
-        elif re.findall(r'text\/xml',
-                        request.headers['Accept'].decode('utf8')):
+        if re.findall(r'(text\/xml|application\/xhtml\+xml|application\/xml)',
+                      request.headers['Accept'].decode('utf8')):
             response = XmlResponse(request=request, **data['response'])
+        elif re.findall(r'text\/html',
+                        request.headers['Accept'].decode('utf8')):
+            response = HtmlResponse(request=request, **data['response'])
+        else:
+            raise TypeError(
+                'Type of request not found for request %s' % request)
 
         middlewares = []
         middleware_paths = data['middlewares']
