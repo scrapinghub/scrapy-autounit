@@ -11,7 +11,7 @@ from scrapy import signals
 from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
-from scrapy.http import HtmlResponse, Request, Response
+from scrapy.http import Request, Response
 from scrapy.utils.python import to_bytes
 from scrapy.utils.reqser import request_to_dict, request_from_dict
 from scrapy.utils.spider import iter_spider_classes
