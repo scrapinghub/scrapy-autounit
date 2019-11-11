@@ -14,7 +14,6 @@ build: false
 install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - pip install -U setuptools
-  - pip install -U pip
   - pip install tox
 
 test_script:
