@@ -126,4 +126,6 @@ def parse_data(data):
         return [parse_data(x) for x in data]
     elif isinstance(data, bytes):
         return to_unicode(data)
-    return data
+    elif isinstance(data, (int, float)):
+        return data
+    return str(data)
