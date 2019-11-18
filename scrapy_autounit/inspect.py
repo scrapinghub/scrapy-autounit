@@ -2,6 +2,7 @@ import sys
 import json
 import argparse
 from pathlib import Path
+from datetime import datetime
 from scrapy.utils.project import inside_project
 from scrapy.utils.python import to_unicode
 from scrapy_autounit.utils import (
@@ -126,6 +127,8 @@ def parse_data(data):
         return [parse_data(x) for x in data]
     elif isinstance(data, bytes):
         return to_unicode(data)
+    elif isinstance(data, datetime):
+        return data.isoformat()
     elif isinstance(data, (int, float)):
         return data
     return str(data)
