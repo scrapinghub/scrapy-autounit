@@ -131,4 +131,4 @@ def parse_data(data):
         return data.isoformat()
     elif isinstance(data, (int, float)):
         return data
-    return str(data)
+    return repr(data)
