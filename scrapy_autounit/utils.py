@@ -200,7 +200,7 @@ def _clean(data, settings, name):
         data.pop(field, None)
 
 
-def write_test(path, test_name, fixture_name, url):
+def write_test(path, test_name, fixture_name, encoding, url):
     command = 'scrapy {}'.format(' '.join(sys.argv))
     test_path = path / ('test_%s.py' % (fixture_name))
 
@@ -235,6 +235,7 @@ if __name__ == '__main__':
         fixture_name=fixture_name,
         command=command,
         url=url,
+        encoding=encoding,
     )
 
     with open(str(test_path), 'w') as f:
