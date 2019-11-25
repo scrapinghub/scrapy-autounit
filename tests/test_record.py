@@ -20,7 +20,9 @@ class MySpider(scrapy.Spider):
         }},
         {custom_settings}
     )
-
+    
+    {init}
+  
     def start_requests(self):
         {start_requests}
 
@@ -64,6 +66,27 @@ def check_process(message, result):
     process_error(message, result)
 
 
+def indent_message(text):
+    _text = re.sub(r'(\n)(\n*)', r'\n\t', text)
+    return re.sub(r'^([\n\t]*)(.*)', r'\t\2', _text)
+
+
+def print_test_output(result):
+    # Print the output of the tests
+    print('\n')
+    print(indent_message(''.join(result['stdout'].decode())))
+    print(indent_message(''.join(result['stderr'].decode())))
+
+def itertree(startpath):
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        yield('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            yield('{}{}'.format(subindent, f))
+
+
 class CaseSpider(object):
     def __init__(self):
         self.dir = tempfile.mkdtemp()
@@ -79,6 +102,7 @@ class CaseSpider(object):
         self._imports = ''
         self._custom_settings = ''
         self._second_callback = None
+        self.init = None
 
     def __enter__(self):
         return self
@@ -95,6 +119,9 @@ class CaseSpider(object):
     def name(self, string):
         self._spider_name = string
 
+    def set_init(self, string):
+        self.init = string
+
     def start_requests(self, string):
         self._start_requests = string
 
@@ -104,18 +131,20 @@ class CaseSpider(object):
     def second_callback(self, string):
         self._second_callback = string
 
+
     def _write_spider(self):
         with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
             dest.write(SPIDER_TEMPLATE.format(
                 name=self._spider_name,
+                init=self.init,
                 start_requests=self._start_requests,
                 parse=self._parse,
                 imports=self._imports,
                 custom_settings=self._custom_settings,
-                second_callback=self._second_callback,
+                second_callback=self._second_callback
             ))
 
-    def record(self, args=None, settings=None):
+    def record(self, args=None, settings=None, record_verbosity=False):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         self._write_spider()
@@ -135,18 +164,20 @@ class CaseSpider(object):
         result = run(
             command_args,
             env=env,
-            cwd='/',
+            cwd=self.dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
         check_process('Running spider failed!', result)
+        if record_verbosity:
+            print_test_output(result)
         if not any(
             any(f.endswith('.py') and f != '__init__.py' for f in files)
             for _, _, files in os.walk(os.path.join(self.dir, 'autounit'))
         ):
             process_error('No autounit tests recorded!', result)
 
-    def test(self):
+    def test(self, test_verbosity=True):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -155,23 +186,26 @@ class CaseSpider(object):
             [
                 'python', '-m', 'unittest', 'discover', '-v'
             ],
-            cwd=self.dir,
             env=env,
-            stderr=subprocess.PIPE,
+            cwd=self.dir,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
         tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
-        if tests_ran == '0':
-            def itertree():
-                for root, dirs, files in os.walk(self.dir):
-                    for f in files:
-                        yield os.path.join(root, f)
-            raise AssertionError(
-                'No tests run!\nProject dir:\n{}'.format(
-                    '\n'.join(itertree())
-                ))
+
+        is_ok = re.findall('OK$', err)
+        if test_verbosity:
+            print_test_output(result)
+        if not is_ok or not tests_ran:
+            if not tests_ran:
+                raise AssertionError(
+                    'No tests run!\nProject dir:\n{}'.format(
+                        '\n'.join(itertree(self.dir))
+                    ))
+            elif not test_verbosity:
+                print_test_output(result)
 
 
 class TestRecording(unittest.TestCase):
@@ -231,11 +265,11 @@ class TestRecording(unittest.TestCase):
             """)
             spider.parse("""
                 self.param += 1
-                reqs = self.parse_item()
+                reqs = self.second_callback(response)
                 for r in reqs:
                     yield r
             """)
-            spider.parse_item("""
+            spider.second_callback("""
                 self.__page += 1
                 if self.__page > 3:
                     self.end = True
@@ -258,11 +292,11 @@ class TestRecording(unittest.TestCase):
             """)
             spider.parse("""
                 self.param += 1
-                reqs = self.parse_item()
+                reqs = self.second_callback(response)
                 for r in reqs:
                     yield r
             """)
-            spider.parse_item("""
+            spider.second_callback("""
                 self.__page = getattr(self, '_MySpider__page', 0) + 1
                 if self.__page > 3:
                     self.end = True
@@ -278,7 +312,7 @@ class TestRecording(unittest.TestCase):
 
         # Recursive calls including private variables using getattr
         with CaseSpider() as spider:
-            spider.init("""
+            spider.set_init("""def __init__(self, *args, **kwargs):
                 self.page_number = 0
             """)
             spider.start_requests("""
