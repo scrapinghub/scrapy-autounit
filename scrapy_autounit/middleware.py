@@ -1,4 +1,6 @@
 import six
+import copy
+import pickle
 import random
 from pathlib import Path
 import logging
@@ -70,7 +72,7 @@ class AutounitMiddleware:
         filter_args = {'crawler', 'settings', 'start_urls'}
         if isinstance(spider, CrawlSpider):
             filter_args |= {'rules', '_rules'}
-        response.meta['_autounit'] = {
+        response.meta['_autounit'] = pickle.dumps({
             'request': parse_request(response.request, spider),
             'response': response_to_dict(response),
             'spider_args': {
@@ -78,7 +80,7 @@ class AutounitMiddleware:
                 if k not in filter_args
             },
             'middlewares': get_middlewares(spider),
-        }
+        })
         return None
 
     def process_spider_output(self, response, result, spider):
@@ -87,12 +89,18 @@ class AutounitMiddleware:
         out = []
         for elem in result:
             out.append(elem)
+            is_request = isinstance(elem, Request)
+            if is_request:
+                _data = parse_request(elem, spider)
+            else:
+                _data = parse_object(copy.deepcopy(elem), spider)
             processed_result.append({
-                'type': 'request' if isinstance(elem, Request) else 'item',
-                'data': parse_object(elem, spider)
+                'type': 'request' if is_request else 'item',
+                'data': _data
             })
 
-        input_data = response.meta.pop('_autounit')
+        input_data = pickle.loads(response.meta.pop('_autounit'))
+
         request = input_data['request']
         callback_name = request['callback']
         spider_attr_out = {

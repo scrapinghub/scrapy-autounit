@@ -367,3 +367,29 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.record()
             spider.test()
+
+    def test_reference_preservation(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                )
+            ''')
+            spider.parse('''
+                x = [1]
+                item = {'data': x}
+                yield scrapy.Request(
+                    'data:text/plain,',
+                    callback=self.second_callback,
+                    meta={'x': x, 'item': item},
+                    dont_filter=True
+                )
+            ''')
+            spider.second_callback('''
+                item = response.meta['item']
+                x = response.meta['x']
+                x.append(2)
+                yield item  # should yield {'data': [1, 2]}
+            ''')
+            spider.record()
+            spider.test()
