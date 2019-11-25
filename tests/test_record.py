@@ -1,9 +1,10 @@
-import os
-import re
-import shutil
-import subprocess
-import tempfile
 import unittest
+import tempfile
+import subprocess
+import os
+import shutil
+import re
+
 
 SPIDER_TEMPLATE = '''
 import scrapy
@@ -15,22 +16,19 @@ class MySpider(scrapy.Spider):
 
     custom_settings = dict(
         SPIDER_MIDDLEWARES={{
-            '{autonit_module_path}': 950,
+            'scrapy_autounit.AutounitMiddleware': 950,
         }},
         {custom_settings}
     )
 
-    def __init__(self, *args, **kwargs):
-       {init} 
-        
     def start_requests(self):
         {start_requests}
 
     def parse(self, response):
         {parse}
 
-    def parse_item(self):
-        {parse_item}
+    def second_callback(self, response):
+        {second_callback}
 '''
 
 
@@ -66,28 +64,6 @@ def check_process(message, result):
     process_error(message, result)
 
 
-def indent_message(text):
-    _text = re.sub(r'(\n)(\n*)', r'\n\t', text)
-    return re.sub(r'^([\n\t]*)(.*)', r'\t\2', _text)
-
-
-def print_test_output(result):
-    # Print the output of the tests
-    print('\n')
-    print(indent_message(''.join(result['stdout'].decode())))
-    print(indent_message(''.join(result['stderr'].decode())))
-
-
-def itertree(startpath):
-    for root, dirs, files in os.walk(startpath):
-        level = root.replace(startpath, '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        yield('{}{}/'.format(indent, os.path.basename(root)))
-        subindent = ' ' * 4 * (level + 1)
-        for f in files:
-            yield('{}{}'.format(subindent, f))
-
-
 class CaseSpider(object):
     def __init__(self):
         self.dir = tempfile.mkdtemp()
@@ -97,49 +73,18 @@ class CaseSpider(object):
             pass
         with open(os.path.join(self.proj_dir, 'settings.py'), 'w') as dest:
             dest.write('SPIDER_MODULES = ["myproject"]\n')
-        # Modification: the test is performed using the local middleware files,
-        # not on the installed package.
-        # Replace path of modules for the test to reference the local path
-        # where the files are copied: scrapy_autounit.utils -> .utils
-        self.autounit_module_path = (
-            '{}.middleware.AutounitMiddleware'.format('myproject'))
-        self.autounit_utils_path = (
-            '{}.utils'.format('myproject'))
-        self.autounit_paths_update = {
-            'scrapy_autounit.AutounitMiddleware': self.autounit_module_path,
-            'scrapy_autounit.utils': self.autounit_utils_path,
-        }
-        self._write_mw()
-        self._init = "pass"
         self._start_requests = None
         self._parse = None
-        self._parse_item = None
         self._spider_name = 'myspider'
         self._imports = ''
         self._custom_settings = ''
+        self._second_callback = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         shutil.rmtree(self.dir)
-
-    @property
-    def spider_text(self):
-        return self._spider_text
-
-    def set_spider_text(self):
-        self._spider_text = SPIDER_TEMPLATE.format(
-                name=self._spider_name,
-                init=self._init,
-                start_requests=self._start_requests,
-                parse=self._parse,
-                parse_item=self._parse_item,
-                imports=self._imports,
-                custom_settings=self._custom_settings,
-                autonit_module_path=self.autounit_module_path,
-            )
-        print(self._spider_text)
 
     def imports(self, string):
         self._imports = string
@@ -150,50 +95,27 @@ class CaseSpider(object):
     def name(self, string):
         self._spider_name = string
 
-    def init(self, string):
-        self._init = string
-
     def start_requests(self, string):
         self._start_requests = string
 
     def parse(self, string):
         self._parse = string
 
-    def parse_item(self, string):
-        self._parse_item = string
-
-    def _update_paths_in_text(self, string):
-        for k, v in self.autounit_paths_update.items():
-            string = string.replace(k, v)
-        return string
+    def second_callback(self, string):
+        self._second_callback = string
 
     def _write_spider(self):
-        spider_folder = os.path.join(self.proj_dir, 'spiders')
-        self.spider_folder = spider_folder
-        if not os.path.exists(spider_folder):
-            os.mkdir(spider_folder)
-        with open(os.path.join(spider_folder, 'myspider.py'), 'w') as dest:
-            dest.write(self.spider_text)
-        with open(os.path.join(spider_folder, '__init__.py'), 'w') as dest:
-            dest.write("")
+        with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
+            dest.write(SPIDER_TEMPLATE.format(
+                name=self._spider_name,
+                start_requests=self._start_requests,
+                parse=self._parse,
+                imports=self._imports,
+                custom_settings=self._custom_settings,
+                second_callback=self._second_callback,
+            ))
 
-    def _write_mw(self):
-        mw_folder = self.proj_dir
-        self.mw_folder = mw_folder
-        if not os.path.exists(mw_folder):
-            os.mkdir(mw_folder)
-        for item in os.listdir('scrapy_autounit'):
-            if item.endswith('.py') and item != '__init__.py':
-                s = os.path.join('scrapy_autounit', item)
-                d = os.path.join(mw_folder, item)
-                with open(s, 'r') as file:
-                    file_text = file.read()
-                file_text = self._update_paths_in_text(file_text)
-                with open(d, 'w') as dest:
-                    dest.write(file_text)
-
-    def record(self, args=None, settings=None, record_verbosity=False):
-        self.set_spider_text()
+    def record(self, args=None, settings=None):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         self._write_spider()
@@ -213,20 +135,18 @@ class CaseSpider(object):
         result = run(
             command_args,
             env=env,
-            cwd=self.dir,
+            cwd='/',
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
         check_process('Running spider failed!', result)
-        if record_verbosity:
-            print_test_output(result)
         if not any(
             any(f.endswith('.py') and f != '__init__.py' for f in files)
             for _, _, files in os.walk(os.path.join(self.dir, 'autounit'))
         ):
             process_error('No autounit tests recorded!', result)
 
-    def test(self, test_verbosity=True):
+    def test(self):
         if self._start_requests is None or self._parse is None:
             raise AssertionError()
         env = os.environ.copy()
@@ -243,18 +163,15 @@ class CaseSpider(object):
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
         tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
-
-        is_ok = re.findall('OK$', err)
-        if test_verbosity:
-            print_test_output(result)
-        if not is_ok or not tests_ran:
-            if not tests_ran:
-                raise AssertionError(
-                    'No tests run!\nProject dir:\n{}'.format(
-                        '\n'.join(itertree(self.dir))
-                    ))
-            elif not test_verbosity:
-                print_test_output(result)
+        if tests_ran == '0':
+            def itertree():
+                for root, dirs, files in os.walk(self.dir):
+                    for f in files:
+                        yield os.path.join(root, f)
+            raise AssertionError(
+                'No tests run!\nProject dir:\n{}'.format(
+                    '\n'.join(itertree())
+                ))
 
 
 class TestRecording(unittest.TestCase):
