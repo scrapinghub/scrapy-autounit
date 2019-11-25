@@ -26,6 +26,9 @@ class MySpider(scrapy.Spider):
 
     def parse(self, response):
         {parse}
+
+    def second_callback(self, response):
+        {second_callback}
 '''
 
 
@@ -75,6 +78,7 @@ class CaseSpider(object):
         self._spider_name = 'myspider'
         self._imports = ''
         self._custom_settings = ''
+        self._second_callback = None
 
     def __enter__(self):
         return self
@@ -97,6 +101,9 @@ class CaseSpider(object):
     def parse(self, string):
         self._parse = string
 
+    def second_callback(self, string):
+        self._second_callback = string
+
     def _write_spider(self):
         with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
             dest.write(SPIDER_TEMPLATE.format(
@@ -105,6 +112,7 @@ class CaseSpider(object):
                 parse=self._parse,
                 imports=self._imports,
                 custom_settings=self._custom_settings,
+                second_callback=self._second_callback,
             ))
 
     def record(self, args=None, settings=None):
@@ -254,6 +262,32 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.parse('''
                 yield {'data': response}
+            ''')
+            spider.record()
+            spider.test()
+
+    def test_reference_preservation(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                )
+            ''')
+            spider.parse('''
+                x = [1]
+                item = {'data': x}
+                yield scrapy.Request(
+                    'data:text/plain,',
+                    callback=self.second_callback,
+                    meta={'x': x, 'item': item},
+                    dont_filter=True
+                )
+            ''')
+            spider.second_callback('''
+                item = response.meta['item']
+                x = response.meta['x']
+                x.append(2)
+                yield item  # should yield {'data': [1, 2]}
             ''')
             spider.record()
             spider.test()
