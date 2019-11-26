@@ -20,9 +20,11 @@ class MySpider(scrapy.Spider):
         }},
         {custom_settings}
     )
-    
-    {init}
-  
+
+    def __init__(self, *args, **kwargs):
+        {init}
+        super(MySpider, self).__init__(*args, **kwargs)
+
     def start_requests(self):
         {start_requests}
 
@@ -77,6 +79,7 @@ def print_test_output(result):
     print(indent_message(''.join(result['stdout'].decode())))
     print(indent_message(''.join(result['stderr'].decode())))
 
+
 def itertree(startpath):
     for root, dirs, files in os.walk(startpath):
         level = root.replace(startpath, '').count(os.sep)
@@ -130,7 +133,6 @@ class CaseSpider(object):
 
     def second_callback(self, string):
         self._second_callback = string
-
 
     def _write_spider(self):
         with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
@@ -312,9 +314,7 @@ class TestRecording(unittest.TestCase):
 
         # Recursive calls including private variables using getattr
         with CaseSpider() as spider:
-            spider.set_init("""def __init__(self, *args, **kwargs):
-                self.page_number = 0
-            """)
+            spider.set_init("""self.page_number = 0""")
             spider.start_requests("""
                 yield scrapy.Request('data:text/plain,')
             """)
