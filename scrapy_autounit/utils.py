@@ -10,7 +10,7 @@ import six
 from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
-from scrapy.http import HtmlResponse, Request, Response
+from scrapy.http import Request, Response
 from scrapy.item import Item
 from scrapy.utils.conf import (build_component_list, closest_scrapy_cfg,
                                init_env)
@@ -24,6 +24,11 @@ import datadiff.tools
 
 NO_ITEM_MARKER = object()
 FIXTURE_VERSION = 1
+
+
+def auto_import(qualified_name):
+    mod_name, class_name = qualified_name.rsplit('.', 1)
+    return getattr(import_module(mod_name), class_name)
 
 
 def create_instance(objcls, settings, crawler, *args, **kwargs):
@@ -126,6 +131,11 @@ def unpickle_data(data, encoding):
 
 def response_to_dict(response):
     return {
+        'cls': '{}.{}'.format(
+            type(response).__module__,
+            getattr(type(response), '__qualname__', None) or
+            getattr(type(response), '__name__', None)
+        ),
         'url': response.url,
         'status': response.status,
         'body': response.body,
@@ -309,7 +319,9 @@ def generate_test(fixture_path, encoding='utf-8'):
             'spider_args', data.get('spider_args_in', {}))
         set_spider_attrs(spider, spider_args_in)
         request = request_from_dict(data['request'], spider)
-        response = HtmlResponse(request=request, **data['response'])
+        response_cls = auto_import(data['response'].pop(
+            'cls', 'scrapy.http.HtmlResponse'))
+        response = response_cls(request=request, **data['response'])
 
         middlewares = []
         middleware_paths = data['middlewares']
