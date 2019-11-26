@@ -62,10 +62,10 @@ def get_project_dir():
 
 
 def get_middlewares(spider):
-    autounit_mw_path = 'scrapy_autounit.AutounitMiddleware'
-
     full_list = build_component_list(
         spider.settings.getwithbase('SPIDER_MIDDLEWARES'))
+    autounit_mw_path = list(filter(
+        lambda x: x.endswith('AutounitMiddleware'), full_list))[0]
     start = full_list.index(autounit_mw_path)
     mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
 
@@ -341,7 +341,7 @@ def generate_test(fixture_path, encoding='utf-8'):
             k: v for k, v in spider.__dict__.items()
             if k not in ('crawler', 'settings', 'start_urls')
         }
-        self.assertEqual(spider_args_in, result_attr_in, 'Not equal!')
+        self.assertEqual(spider_args_in, result_attr_in, 'Input arguments not equal!')
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
@@ -391,6 +391,6 @@ def generate_test(fixture_path, encoding='utf-8'):
             if k not in ('crawler', 'settings', 'start_urls')
         }
 
-        self.assertEqual(data['spider_args_out'], result_attr_out, 'Not equal!'
+        self.assertEqual(data['spider_args_out'], result_attr_out, 'Output arguments not equal!'
                          )
     return test

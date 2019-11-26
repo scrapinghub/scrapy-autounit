@@ -107,6 +107,10 @@ class CaseSpider(object):
         self._second_callback = None
         self.init = None
 
+    @property
+    def template(self):
+        return SPIDER_TEMPLATE
+
     def __enter__(self):
         return self
 
@@ -136,7 +140,7 @@ class CaseSpider(object):
 
     def _write_spider(self):
         with open(os.path.join(self.proj_dir, 'myspider.py'), 'w') as dest:
-            dest.write(SPIDER_TEMPLATE.format(
+            dest.write(self.template.format(
                 name=self._spider_name,
                 init=self.init,
                 start_requests=self._start_requests,
@@ -195,8 +199,7 @@ class CaseSpider(object):
         )
         check_process('Unit tests failed!', result)
         err = result['stderr'].decode('utf-8')
-        tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
-
+        tests_ran = int(re.search('Ran ([0-9]+) test', err).group(1) or '0')
         is_ok = re.findall('OK$', err)
         if test_verbosity:
             print_test_output(result)
@@ -211,6 +214,7 @@ class CaseSpider(object):
 
 
 class TestRecording(unittest.TestCase):
+
     def test_normal(self):
         with CaseSpider() as spider:
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
@@ -459,3 +463,63 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.record()
             spider.test()
+
+    def test_fixture_length(self):
+        class ModifiedSpider(CaseSpider):
+            @property
+            def template(self):
+                return re.sub(
+                    r'(scrapy_autounit)(\.)(AutounitMiddleware)',
+                    r'tests.DelObjectsAutounitMiddleware',
+                    super(ModifiedSpider, self).template)
+        with ModifiedSpider() as spider:
+            spider.set_init("""
+        self.page_number = 0
+        self.base_url = "http://www.example.com"
+            """)
+            spider.start_requests("""
+                yield scrapy.Request('data:text/plain,', self.parse,
+                                     meta={'test_attr': {'page_number': -1,
+                                    'base_url': ''}})
+            """)
+            spider.parse("""
+                yield {'a': 5}
+            """)
+            spider.record(record_verbosity=True)
+            expected_message = "AssertionError: The fixture's data length "\
+                               "doesn't match with the current callback's "\
+                               "output length."
+            with self.assertRaisesRegex(AssertionError,
+                                        re.escape(expected_message)):
+                spider.test(test_verbosity=True)
+
+    def test_attribute_change_raises_error(self):
+        class ModifiedSpider(CaseSpider):
+            @property
+            def template(self):
+                return re.sub(
+                    r'(scrapy_autounit)(\.)(AutounitMiddleware)',
+                    r'tests.DelAttr\3', super(ModifiedSpider, self).template)
+
+        with ModifiedSpider() as spider:
+            spider.set_init("""self.page_number = 0""")
+            spider.start_requests("""
+                self.test_attr = 100 # attribute to be deleted
+                yield scrapy.Request('data:text/plain,', self.parse)
+            """)
+            spider.parse("""
+                self.page_number += 1
+                yield {
+                    'page_number': self.page_number
+                }
+                if self.page_number < 3:
+                    yield scrapy.Request('data:text/plain,', dont_filter=True)
+            """)
+            spider.record()
+            expected_message = """
+    AssertionError: {'page_number': 1} != {'page_number': 1, 'test_attr': 100}
+    - {'page_number': 1}
+    + {'page_number': 1, 'test_attr': 100} : Output arguments not equal!"""
+            with self.assertRaisesRegex(AssertionError,
+                                        re.escape(expected_message)):
+                spider.test(test_verbosity=True)

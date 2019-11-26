@@ -119,7 +119,6 @@ class AutounitMiddleware:
             'middlewares': input_data['middlewares'],
             'python_version': 2 if six.PY2 else 3,
         }
-
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
         self.fixture_counters[callback_name] += 1
 
