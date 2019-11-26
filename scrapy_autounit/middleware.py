@@ -103,13 +103,18 @@ class AutounitMiddleware:
 
         request = input_data['request']
         callback_name = request['callback']
+        spider_attr_out = {
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
 
         data = {
             'spider_name': spider.name,
             'request': request,
             'response': input_data['response'],
+            'spider_args_out': spider_attr_out,
             'result': processed_result,
-            'spider_args': input_data['spider_args'],
+            'spider_args_in': input_data['spider_args'],
             'settings': _copy_settings(settings),
             'middlewares': input_data['middlewares'],
             'python_version': 2 if six.PY2 else 3,

@@ -1,33 +1,26 @@
 import os
-import six
+import pickle
 import sys
 import zlib
-import pickle
-from pathlib import Path
-from itertools import islice
 from importlib import import_module
+from itertools import islice
+from pathlib import Path
 
+import six
 from scrapy import signals
-from scrapy.item import Item
 from scrapy.crawler import Crawler
 from scrapy.exceptions import NotConfigured
 from scrapy.http import Request, Response
-from scrapy.utils.python import to_bytes
-from scrapy.utils.reqser import request_to_dict, request_from_dict
-from scrapy.utils.spider import iter_spider_classes
+from scrapy.item import Item
+from scrapy.utils.conf import (build_component_list, closest_scrapy_cfg,
+                               init_env)
+from scrapy.utils.misc import arg_to_iter, load_object, walk_modules
 from scrapy.utils.project import get_project_settings
-from scrapy.utils.misc import (
-    walk_modules,
-    load_object,
-    arg_to_iter,
-)
-from scrapy.utils.conf import (
-    init_env,
-    closest_scrapy_cfg,
-    build_component_list,
-)
-import datadiff.tools
+from scrapy.utils.python import to_bytes
+from scrapy.utils.reqser import request_from_dict, request_to_dict
+from scrapy.utils.spider import iter_spider_classes
 
+import datadiff.tools
 
 NO_ITEM_MARKER = object()
 FIXTURE_VERSION = 1
@@ -217,7 +210,7 @@ def _clean(data, settings, name):
         data.pop(field, None)
 
 
-def write_test(path, test_name, fixture_name, url):
+def write_test(path, test_name, fixture_name, encoding, url):
     command = 'scrapy {}'.format(' '.join(sys.argv))
     test_path = path / ('test_%s.py' % (fixture_name))
 
@@ -252,6 +245,7 @@ if __name__ == '__main__':
         fixture_name=fixture_name,
         command=command,
         url=url,
+        encoding=encoding,
     )
 
     with open(str(test_path), 'w') as f:
@@ -285,6 +279,11 @@ def binary_check(fx_obj, cb_obj, encoding):
     return fx_obj
 
 
+def set_spider_attrs(spider, _args):
+    for k, v in _args.items():
+        setattr(spider, k, v)
+
+
 def generate_test(fixture_path, encoding='utf-8'):
     with open(str(fixture_path), 'rb') as f:
         raw_data = f.read()
@@ -306,14 +305,19 @@ def generate_test(fixture_path, encoding='utf-8'):
     spider_cls.update_settings(settings)
     for k, v in data.get('settings', {}).items():
         settings.set(k, v, 50)
+
     crawler = Crawler(spider_cls, settings)
-    spider = spider_cls.from_crawler(crawler, **data.get('spider_args'))
+    spider_args_in = data.get('spider_args', data.get('spider_args_in', {}))
+    spider = spider_cls.from_crawler(crawler, **spider_args_in)
     crawler.spider = spider
 
     def test(self):
         fx_result = data['result']
         fx_version = data.get('python_version')
 
+        spider_args_in = data.get(
+            'spider_args', data.get('spider_args_in', {}))
+        set_spider_attrs(spider, spider_args_in)
         request = request_from_dict(data['request'], spider)
         response_cls = auto_import(data['response'].pop(
             'cls', 'scrapy.http.HtmlResponse'))
@@ -333,6 +337,11 @@ def generate_test(fixture_path, encoding='utf-8'):
             signal=signals.spider_opened,
             spider=spider
         )
+        result_attr_in = {
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
+        self.assertEqual(spider_args_in, result_attr_in, 'Not equal!')
 
         for mw in middlewares:
             if hasattr(mw, 'process_spider_input'):
@@ -376,4 +385,12 @@ def generate_test(fixture_path, encoding='utf-8'):
                         "output:{}".format(index, e)),
                     None)
 
+        # Spider attributes get updated after the yield
+        result_attr_out = {
+            k: v for k, v in spider.__dict__.items()
+            if k not in ('crawler', 'settings', 'start_urls')
+        }
+
+        self.assertEqual(data['spider_args_out'], result_attr_out, 'Not equal!'
+                         )
     return test
