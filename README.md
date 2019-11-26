@@ -8,7 +8,7 @@ Scrapy Autounit generates test fixtures and tests cases as you run your spiders.
 The test fixtures are generated from the items and requests that your spider yields, then the test cases evaluate those fixtures against your spiders' callbacks.
 
 Scrapy Autounit generates fixtures and tests per spider and callback under the Scrapy project root directory.  
-Here is an example of the directory tree of your project once the tests are created:  
+Here is an example of the directory tree of your project once the fixtures are created:  
 ```
 my_project
 ├── autounit
@@ -21,8 +21,7 @@ my_project
 │               ├── __init__.py
 │               ├── fixture1.bin
 │               ├── fixture2.bin
-│               ├── test_fixture1.py
-│               ├── test_fixture2.py
+│               ├── test_fixtures.py
 ├── my_project
 │   ├── __init__.py
 │   ├── items.py

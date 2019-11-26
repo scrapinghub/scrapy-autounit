@@ -197,17 +197,14 @@ class CaseSpider(object):
         err = result['stderr'].decode('utf-8')
         tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
 
-        is_ok = re.findall('OK$', err)
+        if tests_ran == '0':
+            raise AssertionError(
+                'No tests run!\nProject dir:\n{}'.format(
+                    '\n'.join(itertree(self.dir))
+                )
+            )
         if test_verbosity:
             print_test_output(result)
-        if not is_ok or not tests_ran:
-            if not tests_ran:
-                raise AssertionError(
-                    'No tests run!\nProject dir:\n{}'.format(
-                        '\n'.join(itertree(self.dir))
-                    ))
-            elif not test_verbosity:
-                print_test_output(result)
 
 
 class TestRecording(unittest.TestCase):
