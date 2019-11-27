@@ -226,7 +226,7 @@ from scrapy_autounit.utils import generate_test
 
 class AutoUnit(unittest.TestCase):
     def test__{test_name}(self):
-        files = os.listdir(Path.resolve(Path(__file__).parent))
+        files = os.listdir(str(Path.resolve(Path(__file__).parent)))
         files = [f for f in files if f.endswith('.bin')]
         self.maxDiff = None
         for f in files:
