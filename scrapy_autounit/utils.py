@@ -360,7 +360,9 @@ def generate_test(fixture_path, encoding='utf-8'):
             if any(item == NO_ITEM_MARKER for item in (cb_obj, fx_item)):
                 raise AssertionError(
                     "The fixture's data length doesn't match with "
-                    "the current callback's output length."
+                    "the current callback's output length. "
+                    "Expected %s, found %s" % (
+                        index + 1 + len(list(result)), len(fx_result))
                 )
 
             cb_obj = parse_object(cb_obj, spider)
