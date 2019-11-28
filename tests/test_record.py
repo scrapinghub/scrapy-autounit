@@ -38,14 +38,12 @@ class MySpider(scrapy.Spider):
 
 def run(*pargs, **kwargs):
     proc = subprocess.Popen(*pargs, **kwargs)
-    proc.wait()
+    stdout, stderr = proc.communicate()
     out = {
         'returncode': proc.returncode,
-        'stdout': proc.stdout.read(),
-        'stderr': proc.stderr.read(),
+        'stdout': stdout,
+        'stderr': stderr,
     }
-    proc.stderr.close()
-    proc.stdout.close()
     return out
 
 
@@ -197,17 +195,14 @@ class CaseSpider(object):
         err = result['stderr'].decode('utf-8')
         tests_ran = re.search('Ran ([0-9]+) test', err).group(1)
 
-        is_ok = re.findall('OK$', err)
+        if tests_ran == '0':
+            raise AssertionError(
+                'No tests run!\nProject dir:\n{}'.format(
+                    '\n'.join(itertree(self.dir))
+                )
+            )
         if test_verbosity:
             print_test_output(result)
-        if not is_ok or not tests_ran:
-            if not tests_ran:
-                raise AssertionError(
-                    'No tests run!\nProject dir:\n{}'.format(
-                        '\n'.join(itertree(self.dir))
-                    ))
-            elif not test_verbosity:
-                print_test_output(result)
 
 
 class TestRecording(unittest.TestCase):
@@ -261,12 +256,9 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.start_requests("""
                 self.__page = 0
-                self.param = 0
-                self._base_url = 'www.nothing.com'
                 yield scrapy.Request('data:text/plain,', callback=self.parse)
             """)
             spider.parse("""
-                self.param += 1
                 reqs = self.second_callback(response)
                 for r in reqs:
                     yield r
@@ -274,7 +266,6 @@ class TestRecording(unittest.TestCase):
             spider.second_callback("""
                 self.__page += 1
                 if self.__page > 3:
-                    self.end = True
                     yield {'a': 4}
                     return
                 for i in range(3):
@@ -288,12 +279,9 @@ class TestRecording(unittest.TestCase):
         # Recursive calls including private variables using getattr
         with CaseSpider() as spider:
             spider.start_requests("""
-                self.param = 0
-                self._base_url = 'www.nothing.com'
                 yield scrapy.Request('data:text/plain,', callback=self.parse)
             """)
             spider.parse("""
-                self.param += 1
                 reqs = self.second_callback(response)
                 for r in reqs:
                     yield r
@@ -301,7 +289,6 @@ class TestRecording(unittest.TestCase):
             spider.second_callback("""
                 self.__page = getattr(self, '_MySpider__page', 0) + 1
                 if self.__page > 3:
-                    self.end = True
                     yield {'a': 4}
                     return
                 for i in range(3):
