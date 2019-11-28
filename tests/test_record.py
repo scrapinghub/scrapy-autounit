@@ -38,14 +38,12 @@ class MySpider(scrapy.Spider):
 
 def run(*pargs, **kwargs):
     proc = subprocess.Popen(*pargs, **kwargs)
-    proc.wait()
+    stdout, stderr = proc.communicate()
     out = {
         'returncode': proc.returncode,
-        'stdout': proc.stdout.read(),
-        'stderr': proc.stderr.read(),
+        'stdout': stdout,
+        'stderr': stderr,
     }
-    proc.stderr.close()
-    proc.stdout.close()
     return out
 
 
@@ -262,12 +260,9 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.start_requests("""
                 self.__page = 0
-                self.param = 0
-                self._base_url = 'www.nothing.com'
                 yield scrapy.Request('data:text/plain,', callback=self.parse)
             """)
             spider.parse("""
-                self.param += 1
                 reqs = self.second_callback(response)
                 for r in reqs:
                     yield r
@@ -275,7 +270,6 @@ class TestRecording(unittest.TestCase):
             spider.second_callback("""
                 self.__page += 1
                 if self.__page > 3:
-                    self.end = True
                     yield {'a': 4}
                     return
                 for i in range(3):
@@ -289,12 +283,9 @@ class TestRecording(unittest.TestCase):
         # Recursive calls including private variables using getattr
         with CaseSpider() as spider:
             spider.start_requests("""
-                self.param = 0
-                self._base_url = 'www.nothing.com'
                 yield scrapy.Request('data:text/plain,', callback=self.parse)
             """)
             spider.parse("""
-                self.param += 1
                 reqs = self.second_callback(response)
                 for r in reqs:
                     yield r
@@ -302,7 +293,6 @@ class TestRecording(unittest.TestCase):
             spider.second_callback("""
                 self.__page = getattr(self, '_MySpider__page', 0) + 1
                 if self.__page > 3:
-                    self.end = True
                     yield {'a': 4}
                     return
                 for i in range(3):

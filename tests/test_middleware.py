@@ -1,5 +1,6 @@
 from scrapy_autounit.middleware import AutounitMiddleware
 
+
 class DelAttrAutounitMiddleware(AutounitMiddleware):
 
     def process_spider_output(self, response, result, spider):
@@ -9,6 +10,7 @@ class DelAttrAutounitMiddleware(AutounitMiddleware):
         return super(self.__class__, self).process_spider_output(response,
                                                                  result,
                                                                  spider)
+
 
 class DelObjectsAutounitMiddleware(AutounitMiddleware):
 
