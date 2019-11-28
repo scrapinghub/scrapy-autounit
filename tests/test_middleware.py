@@ -1,7 +1,7 @@
 from scrapy_autounit.middleware import AutounitMiddleware
 
 
-class DelAttrAutounitMiddleware(AutounitMiddleware):
+class DelAttrAutounitMiddleware(AutounitMiddleware, object):
 
     def process_spider_output(self, response, result, spider):
         if hasattr(spider, 'test_attr'):
@@ -12,7 +12,7 @@ class DelAttrAutounitMiddleware(AutounitMiddleware):
                                                                  spider)
 
 
-class DelObjectsAutounitMiddleware(AutounitMiddleware):
+class DelObjectsAutounitMiddleware(AutounitMiddleware, object):
 
     def process_spider_output(self, response, result, spider):
         result = []

@@ -476,8 +476,8 @@ class TestRecording(unittest.TestCase):
             expected_message = "AssertionError: The fixture's data length "\
                                "doesn't match with the current callback's "\
                                "output length."
-            with self.assertRaisesRegex(AssertionError,
-                                        re.escape(expected_message)):
+            with self.assertRaisesRegexp(AssertionError,
+                                         re.escape(expected_message)):
                 spider.test(test_verbosity=True)
 
     def test_attribute_change_raises_error(self):
@@ -507,8 +507,8 @@ class TestRecording(unittest.TestCase):
     AssertionError: {'page_number': 1} != {'page_number': 1, 'test_attr': 100}
     - {'page_number': 1}
     + {'page_number': 1, 'test_attr': 100} : Output arguments not equal!"""
-            with self.assertRaisesRegex(AssertionError,
-                                        re.escape(expected_message)):
+            with self.assertRaisesRegexp(AssertionError,
+                                         re.escape(expected_message)):
                 spider.test(test_verbosity=True)
 
     def test_missing_parse_method_raises_assertionerror(self):
