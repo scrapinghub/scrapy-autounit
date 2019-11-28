@@ -466,7 +466,7 @@ class TestRecording(unittest.TestCase):
             @property
             def template(self):
                 return re.sub(
-                    r'(scrapy_autounit)(\.)(AutounitMiddleware)',
+                    r'(scrapy\_autounit)(\.)(AutounitMiddleware)',
                     r'tests.DelObjectsAutounitMiddleware',
                     super(ModifiedSpider, self).template)
         with ModifiedSpider() as spider:
@@ -482,7 +482,7 @@ class TestRecording(unittest.TestCase):
             spider.parse("""
                 yield {'a': 5}
             """)
-            spider.record(record_verbosity=True)
+            spider.record()
             expected_message = "AssertionError: The fixture's data length "\
                                "doesn't match with the current callback's "\
                                "output length."
@@ -495,7 +495,7 @@ class TestRecording(unittest.TestCase):
             @property
             def template(self):
                 return re.sub(
-                    r'(scrapy_autounit)(\.)(AutounitMiddleware)',
+                    r'(scrapy\_autounit)(\.)(AutounitMiddleware)',
                     r'tests.DelAttr\3', super(ModifiedSpider, self).template)
 
         with ModifiedSpider() as spider:
@@ -520,3 +520,19 @@ class TestRecording(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError,
                                         re.escape(expected_message)):
                 spider.test(test_verbosity=True)
+
+    def test_missing_parse_method_raises_assertionerror(self):
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                yield scrapy.Request('data:text/plain,')
+            """)
+            with self.assertRaises(AssertionError):
+                spider.record()
+
+    def test_missing_start_requests_method_raises_assertionerror(self):
+        with CaseSpider() as spider:
+            spider.parse("""
+                yield scrapy.Request('data:text/plain,')
+            """)
+            with self.assertRaises(AssertionError):
+                spider.record()
