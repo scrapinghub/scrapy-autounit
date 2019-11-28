@@ -503,10 +503,7 @@ class TestRecording(unittest.TestCase):
                     yield scrapy.Request('data:text/plain,', dont_filter=True)
             """)
             spider.record()
-            expected_message = """
-    AssertionError: {'page_number': 1} != {'page_number': 1, 'test_attr': 100}
-    - {'page_number': 1}
-    + {'page_number': 1, 'test_attr': 100} : Output arguments not equal!"""
+            expected_message = "Output arguments not equal!"
             with self.assertRaisesRegexp(AssertionError,
                                          re.escape(expected_message)):
                 spider.test(test_verbosity=True)
