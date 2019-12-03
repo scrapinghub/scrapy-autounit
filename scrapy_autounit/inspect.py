@@ -1,5 +1,6 @@
 import sys
 import json
+import scrapy
 import argparse
 from pathlib import Path
 from datetime import datetime
@@ -121,7 +122,7 @@ def get_data(path):
 
 
 def parse_data(data):
-    if isinstance(data, dict):
+    if isinstance(data, (dict, scrapy.Item)):
         return {parse_data(k): parse_data(v) for k, v in data.items()}
     elif isinstance(data, list):
         return [parse_data(x) for x in data]
@@ -131,4 +132,4 @@ def parse_data(data):
         return data.isoformat()
     elif isinstance(data, (int, float)):
         return data
-    return repr(data)
+    return str(data)
