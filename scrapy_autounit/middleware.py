@@ -1,8 +1,8 @@
+import os
 import six
 import copy
 import pickle
 import random
-from pathlib import Path
 import logging
 
 from scrapy.http import Request
@@ -56,10 +56,10 @@ class AutounitMiddleware:
         self.max_fixtures = \
             self.max_fixtures if self.max_fixtures >= 10 else 10
 
-        self.base_path = Path(settings.get(
+        self.base_path = settings.get(
             'AUTOUNIT_BASE_PATH',
-            default=get_project_dir() / 'autounit'
-        ))
+            default=os.path.join(get_project_dir(), 'autounit')
+        )
         create_dir(self.base_path, exist_ok=True)
 
         self.fixture_counters = {}

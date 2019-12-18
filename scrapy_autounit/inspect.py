@@ -1,8 +1,8 @@
+import os
 import sys
 import json
 import scrapy
 import argparse
-from pathlib import Path
 from datetime import datetime
 from scrapy.utils.project import inside_project
 from scrapy.utils.python import to_unicode
@@ -67,21 +67,23 @@ def main():
         sys.exit(1)
 
     settings = get_project_settings()
-    base_path = Path(settings.get(
+    base_path = settings.get(
         'AUTOUNIT_BASE_PATH',
-        default=get_project_dir() / 'autounit'
-    ))
+        default=os.path.join(get_project_dir(), 'autounit')
+    )
 
-    tests_dir = base_path / 'tests'
+    tests_dir = os.path.join(base_path, 'tests')
 
-    if not Path.is_dir(tests_dir):
+    if not os.path.isdir(tests_dir):
         print('Autounit tests directory not found\n')
         sys.exit(1)
 
     args.fixture = parse_fixture_arg(args.fixture)
 
     extra_path = settings.get('AUTOUNIT_EXTRA_PATH') or ''
-    path = tests_dir / args.spider / extra_path / args.callback / args.fixture
+    path = os.path.join(
+        tests_dir, args.spider, extra_path, args.callback, args.fixture
+    )
 
     retcode = handle_path(path)
     sys.exit(retcode)
@@ -99,7 +101,7 @@ def parse_fixture_arg(arg):
 
 
 def handle_path(path):
-    if not Path(path).is_file():
+    if not os.path.isfile(path):
         print("Fixture '{}' not found".format(path))
         return 1
     data = get_data(path)

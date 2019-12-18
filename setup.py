@@ -19,7 +19,6 @@ setuptools.setup(
         'Operating System :: OS Independent',
     ],
     install_requires=[
-        'pathlib',
         'datadiff==2.0.0',
     ],
     entry_points = {
