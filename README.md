@@ -131,57 +131,65 @@ This is an extra string element to add to the test path and name between the spi
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.
 
-## Inspecting Data
+## Command line interface
 
-To inspect the data recorded in the binary fixtures you can use `autounit-inspect` command line tool.  
-It's highly recommended that your fixtures were generated with scrapy-autounit 0.0.22 or higher to use this tool.  
+- [`autounit inspect`](#autounit-inspect): inspects fixtures returning a JSON object
+- [`autounit update`](#autounit-update): updates fixtures to callback changes
 
-##### Usage
+### `autounit inspect`  
 
-It has 2 ways of usage, passing a full path to the fixture we want to inspect with the `-p` argument:
+To inspect a fixture's data, you need to pass the spider, callback and fixture name to the command:
 ```
-$ autounit-inspect -p /path/to/your/fixtureN.bin
-```
-Or passing the spider, callback and fixture name you want to inspect:
-```
-$ autounit-inspect -s my_spider -c my_callback -f fixture3
+$ autounit inspect my_spider my_callback fixture3
 ```
 The fixture can also be passed as a number indicating which fixture number to inspect like this:
 ```
-$ autounit-inspect -s my_spider -c my_callback -f 3
+$ autounit inspect my_spider my_callback 3
 ```
+**Note:** It's highly recommended that your fixtures were generated with scrapy-autounit 0.0.22 or higher to inspect data.
 
-##### Extracted Data
-Any of these commands return a JSON object that can be parsed with tools like `jq` to inspect specific blocks of data.  
+#### Extracted Data
+This command returns a JSON object that can be parsed with tools like `jq` to inspect specific blocks of data.  
 
 The top-level keys of the JSON output are:  
 
-***spider_name***  
+***`spider_name`***  
 The name of the spider.  
 
-***request***  
+***`request`***  
 The original request that triggered the callback.  
 
-***response***  
+***`response`***  
 The response obtained from the original request and passed to the callback.  
 
-***result***  
+***`result`***  
 The callback's output such as items and requests.  
 
-***middlewares***  
+***`middlewares`***  
 The relevant middlewares to replicate when running the tests.  
 
-***settings***  
+***`settings`***  
 The settings explicitly recorded by the *`AUTOUNIT_INCLUDED_SETTINGS`* setting.  
 
-***spider_args***  
+***`spider_args`***  
 The arguments passed to the spider in the crawl.  
 
-***python_version***  
+***`python_version`***  
 Indicates if the fixture was recorded in python 2 or 3.  
 
----
 Then for example, to inspect a fixture's specific request we can do the following:
 ```
-$ autounit-inspect -s my_spider -c my_callback -f 4 | jq '.request'
+$ autounit inspect my_spider my_callback 4 | jq '.request'
+```
+
+### `autounit update`
+
+You can update your fixtures to match your latest changes in a particular callback to avoid running the whole spider.  
+For example, this updates all the fixtures for a specific callback:
+```
+$ autounit update my_spider my_callback
+```
+Optionally you can specify a particular fixture to update with `-f` or `--fixture`:
+```
+$ autounit update my_spider my_callback --fixture 4
 ```

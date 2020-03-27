@@ -1,24 +1,23 @@
 import os
 import six
-import copy
 import pickle
 import random
 import logging
 
-from scrapy.http import Request
 from scrapy.exceptions import NotConfigured
 from scrapy.commands.genspider import sanitize_module_name
 from scrapy.spiders import CrawlSpider
 
 from .utils import (
     add_sample,
+    write_test,
     response_to_dict,
     get_or_create_test_dir,
     parse_request,
-    parse_object,
     get_project_dir,
     get_middlewares,
     create_dir,
+    parse_callback_result,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,19 +84,8 @@ class AutounitMiddleware:
 
     def process_spider_output(self, response, result, spider):
         settings = spider.settings
-        processed_result = []
-        out = []
-        for elem in result:
-            out.append(elem)
-            is_request = isinstance(elem, Request)
-            if is_request:
-                _data = parse_request(elem, spider)
-            else:
-                _data = parse_object(copy.deepcopy(elem), spider)
-            processed_result.append({
-                'type': 'request' if is_request else 'item',
-                'data': _data
-            })
+
+        processed_result, out = parse_callback_result(result, spider)
 
         input_data = pickle.loads(response.meta.pop('_autounit'))
 
@@ -130,11 +118,17 @@ class AutounitMiddleware:
             settings.get('AUTOUNIT_EXTRA_PATH'),
         )
 
+        index = 0
         if callback_counter < self.max_fixtures:
-            add_sample(callback_counter + 1, test_dir, test_name, data)
+            index = callback_counter + 1
+            add_sample(index, test_dir, test_name, data)
         else:
             r = random.randint(0, callback_counter)
             if r < self.max_fixtures:
-                add_sample(r + 1, test_dir, test_name, data)
+                index = r + 1
+                add_sample(index, test_dir, test_name, data)
+
+        if index == 1:
+            write_test(test_dir, test_name, request['url'])
 
         return out

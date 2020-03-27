@@ -22,6 +22,8 @@ setuptools.setup(
         'datadiff==2.0.0',
     ],
     entry_points = {
-        'console_scripts': ['autounit-inspect=scrapy_autounit.inspect:main'],
+        'console_scripts': [
+            'autounit=scrapy_autounit.cli:main',
+        ],
     },
 )

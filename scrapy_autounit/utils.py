@@ -1,7 +1,8 @@
 import os
-import pickle
 import sys
+import copy
 import zlib
+import pickle
 from importlib import import_module
 from itertools import islice
 
@@ -99,7 +100,6 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
 
 
 def add_sample(index, test_dir, test_name, data):
-    url = data['request']['url']
     encoding = data['response']['encoding']
     filename = 'fixture%s.bin' % str(index)
     path = os.path.join(test_dir, filename)
@@ -109,10 +109,8 @@ def add_sample(index, test_dir, test_name, data):
         'fixture_version': FIXTURE_VERSION,
     })
     data = compress_data(info)
-    with open(str(path), 'wb') as outfile:
+    with open(path, 'wb') as outfile:
         outfile.write(data)
-    if index == 1:
-        write_test(test_dir, test_name, url)
 
 
 def compress_data(data):
@@ -286,7 +284,24 @@ def set_spider_attrs(spider, _args):
         setattr(spider, k, v)
 
 
-def generate_test(fixture_path, encoding='utf-8'):
+def parse_callback_result(result, spider):
+    processed_result = []
+    out = []
+    for elem in result:
+        out.append(elem)
+        is_request = isinstance(elem, Request)
+        if is_request:
+            _data = parse_request(elem, spider)
+        else:
+            _data = parse_object(copy.deepcopy(elem), spider)
+        processed_result.append({
+            'type': 'request' if is_request else 'item',
+            'data': _data
+        })
+    return processed_result, out
+
+
+def prepare_callback_replay(fixture_path, encoding="utf-8"):
     with open(str(fixture_path), 'rb') as f:
         raw_data = f.read()
 
@@ -297,14 +312,19 @@ def generate_test(fixture_path, encoding='utf-8'):
     else:
         data = fixture_info  # legacy tests
 
+    settings = get_project_settings()
+
     spider_name = data.get('spider_name')
     if not spider_name:  # legacy tests
-        spider_name = fixture_path.parent.parent.name
-
-    settings = get_project_settings()
+        spider_name = os.path.basename(
+            os.path.dirname(
+                os.path.dirname(fixture_path)
+            )
+        )
 
     spider_cls = get_spider_class(spider_name, settings)
     spider_cls.update_settings(settings)
+
     for k, v in data.get('settings', {}).items():
         settings.set(k, v, 50)
 
@@ -312,6 +332,14 @@ def generate_test(fixture_path, encoding='utf-8'):
     spider_args_in = data.get('spider_args', data.get('spider_args_in', {}))
     spider = spider_cls.from_crawler(crawler, **spider_args_in)
     crawler.spider = spider
+
+    return data, crawler, spider, settings
+
+
+def generate_test(fixture_path, encoding='utf-8'):
+    data, crawler, spider, settings = prepare_callback_replay(
+        fixture_path, encoding=encoding
+    )
 
     def test(self):
         fx_result = data['result']
