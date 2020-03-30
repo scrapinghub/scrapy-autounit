@@ -10,6 +10,7 @@ from datetime import datetime
 from scrapy.utils.python import to_unicode
 from scrapy.utils.reqser import request_from_dict
 from scrapy.utils.project import inside_project, get_project_settings
+from scrapy.commands.genspider import sanitize_module_name
 
 from scrapy_autounit.utils import (
     add_sample,
@@ -32,7 +33,7 @@ class CommandLine:
 
         self.command = self.args.command
 
-        self.spider = self.args.spider
+        self.spider = sanitize_module_name(self.args.spider)
         self.callback = self.args.callback
         self.fixture = self.args.fixture
 
