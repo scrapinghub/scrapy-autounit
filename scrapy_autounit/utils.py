@@ -3,6 +3,7 @@ import sys
 import copy
 import zlib
 import pickle
+import shutil
 from importlib import import_module
 from itertools import islice
 
@@ -111,6 +112,11 @@ def add_sample(index, test_dir, test_name, data):
     data = compress_data(info)
     with open(path, 'wb') as outfile:
         outfile.write(data)
+
+
+def clear_fixtures(base_path, spider_name):
+    path = os.path.join(base_path, "tests", spider_name)
+    shutil.rmtree(path, ignore_errors=True)
 
 
 def compress_data(data):

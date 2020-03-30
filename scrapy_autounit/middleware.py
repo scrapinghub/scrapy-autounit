@@ -18,6 +18,7 @@ from .utils import (
     get_middlewares,
     create_dir,
     parse_callback_result,
+    clear_fixtures,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,10 @@ def _copy_settings(settings):
 
 
 class AutounitMiddleware:
-    def __init__(self, settings):
+    def __init__(self, crawler):
+        settings = crawler.settings
+        spider = crawler.spider
+
         if not any(
             self.__class__.__name__ in s
             for s in settings.getwithbase('SPIDER_MIDDLEWARES').keys()
@@ -60,12 +64,13 @@ class AutounitMiddleware:
             default=os.path.join(get_project_dir(), 'autounit')
         )
         create_dir(self.base_path, exist_ok=True)
+        clear_fixtures(self.base_path, sanitize_module_name(spider.name))
 
         self.fixture_counters = {}
 
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(crawler.settings)
+        return cls(crawler)
 
     def process_spider_input(self, response, spider):
         filter_args = {'crawler', 'settings', 'start_urls'}
