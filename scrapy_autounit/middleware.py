@@ -6,7 +6,6 @@ import logging
 
 from scrapy.exceptions import NotConfigured
 from scrapy.commands.genspider import sanitize_module_name
-from scrapy.spiders import CrawlSpider
 
 from .utils import (
     add_sample,
@@ -19,6 +18,7 @@ from .utils import (
     create_dir,
     parse_callback_result,
     clear_fixtures,
+    get_filter_attrs,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,15 +73,12 @@ class AutounitMiddleware:
         return cls(crawler)
 
     def process_spider_input(self, response, spider):
-        filter_args = {'crawler', 'settings', 'start_urls'}
-        if isinstance(spider, CrawlSpider):
-            filter_args |= {'rules', '_rules'}
         response.meta['_autounit'] = pickle.dumps({
             'request': parse_request(response.request, spider),
             'response': response_to_dict(response),
             'spider_args': {
                 k: v for k, v in spider.__dict__.items()
-                if k not in filter_args
+                if k not in get_filter_attrs(spider)
             },
             'middlewares': get_middlewares(spider),
         })
@@ -98,7 +95,7 @@ class AutounitMiddleware:
         callback_name = request['callback']
         spider_attr_out = {
             k: v for k, v in spider.__dict__.items()
-            if k not in ('crawler', 'settings', 'start_urls')
+            if k not in get_filter_attrs(spider)
         }
 
         data = {

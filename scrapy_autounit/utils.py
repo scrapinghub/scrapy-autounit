@@ -10,6 +10,7 @@ from itertools import islice
 import six
 from scrapy import signals
 from scrapy.crawler import Crawler
+from scrapy.spiders import CrawlSpider
 from scrapy.exceptions import NotConfigured
 from scrapy.http import Request, Response
 from scrapy.item import Item
@@ -100,6 +101,13 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
     return test_dir, test_name
 
 
+def get_filter_attrs(spider):
+    attrs = {'crawler', 'settings', 'start_urls'}
+    if isinstance(spider, CrawlSpider):
+        attrs |= {'rules', '_rules'}
+    return attrs
+
+
 def add_sample(index, test_dir, test_name, data):
     encoding = data['response']['encoding']
     filename = 'fixture%s.bin' % str(index)
@@ -182,6 +190,10 @@ def parse_request(request, spider):
     _request = request_to_dict(request, spider=spider)
     if not _request['callback']:
         _request['callback'] = 'parse'
+    elif isinstance(spider, CrawlSpider):
+        rule = request.meta.get('rule')
+        if rule is not None:
+            _request['callback'] = spider.rules[rule].callback
 
     clean_headers(_request['headers'], spider.settings)
 
@@ -375,7 +387,7 @@ def generate_test(fixture_path, encoding='utf-8'):
         )
         result_attr_in = {
             k: v for k, v in spider.__dict__.items()
-            if k not in ('crawler', 'settings', 'start_urls')
+            if k not in get_filter_attrs(spider)
         }
         self.assertEqual(spider_args_in, result_attr_in,
                          'Input arguments not equal!')
@@ -427,7 +439,7 @@ def generate_test(fixture_path, encoding='utf-8'):
         # Spider attributes get updated after the yield
         result_attr_out = {
             k: v for k, v in spider.__dict__.items()
-            if k not in ('crawler', 'settings', 'start_urls')
+            if k not in get_filter_attrs(spider)
         }
 
         self.assertEqual(data['spider_args_out'], result_attr_out,
