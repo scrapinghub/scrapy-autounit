@@ -396,7 +396,8 @@ def generate_test(fixture_path, encoding='utf-8'):
             if hasattr(mw, 'process_spider_input'):
                 mw.process_spider_input(response, spider)
 
-        result = arg_to_iter(request.callback(response))
+        cb_kwargs = getattr(request, "cb_kwargs", {})
+        result = arg_to_iter(request.callback(response, **cb_kwargs))
         middlewares.reverse()
 
         for mw in middlewares:
