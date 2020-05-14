@@ -19,7 +19,7 @@ setuptools.setup(
         'Operating System :: OS Independent',
     ],
     install_requires=[
-        'datadiff==2.0.0',
+        'testfixtures==6.14.1',
     ],
     entry_points = {
         'console_scripts': [
