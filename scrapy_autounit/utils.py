@@ -385,8 +385,9 @@ def generate_test(fixture_path, encoding='utf-8'):
             signal=signals.spider_opened,
             spider=spider
         )
+        d = spider.__getstate__() if hasattr(spider, '__getstate__') else spider.__dict__
         result_attr_in = {
-            k: v for k, v in spider.__dict__.items()
+            k: v for k, v in d.items()
             if k not in get_filter_attrs(spider)
         }
         self.assertEqual(spider_args_in, result_attr_in,
@@ -437,8 +438,9 @@ def generate_test(fixture_path, encoding='utf-8'):
                     None)
 
         # Spider attributes get updated after the yield
+        d = spider.__getstate__() if hasattr(spider, '__getstate__') else spider.__dict__
         result_attr_out = {
-            k: v for k, v in spider.__dict__.items()
+            k: v for k, v in d.items()
             if k not in get_filter_attrs(spider)
         }
 

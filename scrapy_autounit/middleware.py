@@ -73,11 +73,12 @@ class AutounitMiddleware:
         return cls(crawler)
 
     def process_spider_input(self, response, spider):
+        d = spider.__getstate__() if hasattr(spider, '__getstate__') else spider.__dict__
         response.meta['_autounit'] = pickle.dumps({
             'request': parse_request(response.request, spider),
             'response': response_to_dict(response),
             'spider_args': {
-                k: v for k, v in spider.__dict__.items()
+                k: v for k, v in d.items()
                 if k not in get_filter_attrs(spider)
             },
             'middlewares': get_middlewares(spider),
@@ -93,8 +94,9 @@ class AutounitMiddleware:
 
         request = input_data['request']
         callback_name = request['callback']
+        d = spider.__getstate__() if hasattr(spider, '__getstate__') else spider.__dict__
         spider_attr_out = {
-            k: v for k, v in spider.__dict__.items()
+            k: v for k, v in d.items()
             if k not in get_filter_attrs(spider)
         }
 
