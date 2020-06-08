@@ -365,6 +365,7 @@ def generate_test(fixture_path, encoding='utf-8'):
 
         spider_args_in = data.get(
             'spider_args', data.get('spider_args_in', {}))
+        _clean(spider_args_in, settings, 'AUTOUNIT_SKIPPED_FIELDS')
         set_spider_attrs(spider, spider_args_in)
         request = request_from_dict(data['request'], spider)
         response_cls = auto_import(data['response'].pop(
@@ -389,6 +390,7 @@ def generate_test(fixture_path, encoding='utf-8'):
             k: v for k, v in spider.__dict__.items()
             if k not in get_filter_attrs(spider)
         }
+        _clean(result_attr_in, settings, 'AUTOUNIT_SKIPPED_FIELDS')
         self.assertEqual(spider_args_in, result_attr_in,
                          'Input arguments not equal!')
 
@@ -441,7 +443,9 @@ def generate_test(fixture_path, encoding='utf-8'):
             k: v for k, v in spider.__dict__.items()
             if k not in get_filter_attrs(spider)
         }
-
-        self.assertEqual(data['spider_args_out'], result_attr_out,
+        _clean(result_attr_out, settings, 'AUTOUNIT_SKIPPED_FIELDS')
+        spider_args_out = data['spider_args_out']
+        _clean(data['spider_args_out'], settings, 'AUTOUNIT_SKIPPED_FIELDS')
+        self.assertEqual(spider_args_out, result_attr_out,
                          'Output arguments not equal!')
     return test
