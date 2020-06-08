@@ -232,6 +232,7 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.start_requests("""
                 self._base_url = 'www.nothing.com'
+                self.param = 0
                 yield scrapy.Request('data:text/plain,')
             """)
             spider.parse("""
@@ -250,9 +251,22 @@ class TestRecording(unittest.TestCase):
                 self.param = 1
                 yield {'a': 4}
             """)
-            spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_FIELDS='_base_url',
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_FIELDS'))
+            spider.record(settings={
+                'AUTOUNIT_SKIPPED_FIELDS': '_base_url',
+                'AUTOUNIT_INCLUDED_SETTINGS': 'AUTOUNIT_SKIPPED_FIELDS'})
+            spider.test()
+
+        with CaseSpider() as spider:
+            spider.start_requests("""
+                self.values = ['a', 'b']
+                self.mapping = filter(None, self.values)
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                yield {'a': 4}
+            """)
+            spider.record(settings={
+                'AUTOUNIT_SKIPPED_FIELDS': ['mapping']})
             spider.test()
 
     def test_spider_attributes_recursive(self):
