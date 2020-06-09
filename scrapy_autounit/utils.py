@@ -226,6 +226,9 @@ def clean_item(item, settings):
 
 def _clean(data, settings, name):
     fields = settings.get(name, default=[])
+    assert isinstance(fields, list), \
+        f"Autounit setting '{name}' must be a list, "\
+        f"found type '{type(fields)}' ('{fields}')"
     for field in fields:
         data.pop(field, None)
 

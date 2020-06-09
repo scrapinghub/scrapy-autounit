@@ -243,6 +243,9 @@ class TestRecording(unittest.TestCase):
             spider.test()
 
         with CaseSpider() as spider:
+            spider.custom_settings("""
+               AUTOUNIT_SKIPPED_FIELDS = ['_base_url']
+            """)
             spider.start_requests("""
                 self._base_url = 'www.nothing.com'
                 yield scrapy.Request('data:text/plain,')
@@ -251,12 +254,13 @@ class TestRecording(unittest.TestCase):
                 self.param = 1
                 yield {'a': 4}
             """)
-            spider.record(settings={
-                'AUTOUNIT_SKIPPED_FIELDS': '_base_url',
-                'AUTOUNIT_INCLUDED_SETTINGS': 'AUTOUNIT_SKIPPED_FIELDS'})
+            spider.record()
             spider.test()
 
         with CaseSpider() as spider:
+            spider.custom_settings("""
+               AUTOUNIT_SKIPPED_FIELDS = ['mapping']
+            """)
             spider.start_requests("""
                 self.values = ['a', 'b']
                 self.mapping = filter(None, self.values)
@@ -265,8 +269,7 @@ class TestRecording(unittest.TestCase):
             spider.parse("""
                 yield {'a': 4}
             """)
-            spider.record(settings={
-                'AUTOUNIT_SKIPPED_FIELDS': ['mapping']})
+            spider.record()
             spider.test()
 
     def test_spider_attributes_recursive(self):
@@ -362,6 +365,23 @@ class TestRecording(unittest.TestCase):
             ''')
             spider.record()
             spider.test()
+
+    def test_skipped_fields_should_be_list(self):
+        with CaseSpider() as spider:
+            spider.custom_settings("""
+               AUTOUNIT_SKIPPED_FIELDS = 'mapping'
+            """)
+            spider.start_requests("""
+                self.values = ['a', 'b']
+                self.mapping = filter(None, self.values)
+                yield scrapy.Request('data:text/plain,')
+            """)
+            spider.parse("""
+                yield {'a': 4}
+            """)
+            spider.record()
+            with self.assertRaises(AssertionError):
+                spider.test()
 
     def test_request_skipped_fields(self):
         with CaseSpider() as spider:
