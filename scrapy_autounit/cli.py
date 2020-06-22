@@ -1,26 +1,16 @@
-import re
 import os
 import sys
 import json
 import scrapy
 import argparse
-from glob import glob
 from datetime import datetime
 
 from scrapy.utils.python import to_unicode
-from scrapy.utils.reqser import request_from_dict
 from scrapy.utils.project import inside_project, get_project_settings
 from scrapy.commands.genspider import sanitize_module_name
 
-from scrapy_autounit.utils import (
-    add_sample,
-    auto_import,
-    unpickle_data,
-    decompress_data,
-    get_project_dir,
-    parse_callback_result,
-    prepare_callback_replay,
-)
+from .cassette import Cassette
+from .utils import get_base_path, get_project_dir
 
 
 class CommandLine:
@@ -41,12 +31,8 @@ class CommandLine:
         sys.path.append(self.project_dir)
 
         self.settings = get_project_settings()
-
-        base_path = self.settings.get(
-            'AUTOUNIT_BASE_PATH',
-            default=os.path.join(self.project_dir, 'autounit'))
+        base_path = get_base_path(self.settings)
         self.tests_dir = os.path.join(base_path, 'tests')
-
         self.spider_dir = os.path.join(self.tests_dir, self.spider)
 
         if not os.path.isdir(self.spider_dir):
@@ -99,56 +85,46 @@ class CommandLine:
             return data
         return str(data)
 
-    def get_fixture_data(self):
-        with open(self.fixture_path, 'rb') as f:
-            raw_data = f.read()
-        fixture_info = unpickle_data(decompress_data(raw_data), 'utf-8')
-        if 'fixture_version' in fixture_info:
-            encoding = fixture_info['encoding']
-            data = unpickle_data(fixture_info['data'], encoding)
-        else:
-            data = fixture_info  # legacy tests (not all will work, just utf-8)
-        return data
-
     def inspect(self):
-        data = self.parse_data(self.get_fixture_data())
+        cassette = Cassette.from_fixture(self.fixture_path)
+        data = self.parse_data(cassette.to_dict())
         print(json.dumps(data))
 
-    def update(self):
-        to_update = []
-        if self.fixture:
-            to_update.append(self.fixture_path)
-        else:
-            target = os.path.join(self.callback_dir, "*.bin")
-            to_update = glob(target)
+    # def update(self):
+    #     to_update = []
+    #     if self.fixture:
+    #         to_update.append(self.fixture_path)
+    #     else:
+    #         target = os.path.join(self.callback_dir, "*.bin")
+    #         to_update = glob(target)
 
-        for path in to_update:
-            data, _, spider, _ = prepare_callback_replay(path)
+    #     for path in to_update:
+    #         data, _, spider, _ = prepare_callback_replay(path)
 
-            request = request_from_dict(data['request'], spider)
+    #         request = request_from_dict(data['request'], spider)
 
-            response_cls = auto_import(
-                data['response'].pop('cls', 'scrapy.http.HtmlResponse')
-            )
-            response = response_cls(
-                request=data["request"], **data['response'])
+    #         response_cls = auto_import(
+    #             data['response'].pop('cls', 'scrapy.http.HtmlResponse')
+    #         )
+    #         response = response_cls(
+    #             request=data["request"], **data['response'])
 
-            data["result"], _ = parse_callback_result(
-                request.callback(response), spider
-            )
+    #         data["result"], _ = parse_callback_result(
+    #             request.callback(response), spider
+    #         )
 
-            fixture_dir, filename = os.path.split(path)
-            fixture_index = re.search(r"\d+", filename).group()
-            add_sample(fixture_index, fixture_dir, filename, data)
+    #         fixture_dir, filename = os.path.split(path)
+    #         fixture_index = re.search(r"\d+", filename).group()
+    #         add_sample(fixture_index, fixture_dir, filename, data)
 
-            print("Fixture '{}' successfully updated.".format(
-                os.path.relpath(path)))
+    #         print("Fixture '{}' successfully updated.".format(
+    #             os.path.relpath(path)))
 
     def parse_command(self):
         if self.command == "inspect":
             self.inspect()
-        elif self.command == "update":
-            self.update()
+        # elif self.command == "update":
+        #     self.update()
 
 
 def main():

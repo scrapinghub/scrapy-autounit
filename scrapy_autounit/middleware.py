@@ -1,5 +1,4 @@
 import logging
-import secrets
 
 from scrapy import signals
 from scrapy.exceptions import NotConfigured

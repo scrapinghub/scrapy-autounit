@@ -52,3 +52,15 @@ class Cassette:
 
     def pack(self):
         return zlib.compress(pickle.dumps(self, protocol=2))
+
+    def to_dict(self):
+        return {
+            'spider_name': self.spider_name,
+            'request': self.request,
+            'response': self.response,
+            'output_data': self.output_data,
+            'middlewares': self.middlewares,
+            'settings': self.included_settings,
+            'input_attrs': self.input_attrs,
+            'output_attrs': self.output_attrs,
+        }

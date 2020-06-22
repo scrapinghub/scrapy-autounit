@@ -1,9 +1,23 @@
+import os
 import six
-import types
 from itertools import islice
 
 from scrapy.utils.misc import walk_modules
+from scrapy.utils.conf import closest_scrapy_cfg
 from scrapy.utils.spider import iter_spider_classes
+
+
+def get_base_path(settings):
+    return settings.get(
+        'AUTOUNIT_BASE_PATH',
+        default=os.path.join(get_project_dir(), 'autounit')
+    )
+
+
+def get_project_dir():
+    closest_cfg = closest_scrapy_cfg()
+    if closest_cfg:
+        return os.path.dirname(closest_cfg)
 
 
 def get_spider_class(spider_name, project_settings):
@@ -19,13 +33,3 @@ def get_spider_class(spider_name, project_settings):
 
 def python_version():
     return 2 if six.PY2 else 3
-
-
-def ensure_generator(arg):
-	if isinstance(arg, types.GeneratorType):
-		return arg
-	iterator = iter(arg or ())
-	return (x for x in (arg) or ())
-	 
-	
-

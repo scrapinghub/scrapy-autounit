@@ -1,5 +1,4 @@
 import os
-import six
 from glob import glob
 from importlib import import_module
 
@@ -107,9 +106,11 @@ class Player(Parser):
             )
         )
 
+    def len(self, iterator):
+        return len(list(iterator)) + 1
+
     def _compare_outputs(self, found, expected):
         sentinel = object()
-        length = lambda i: len(list(i)) + 1
 
         # Iterate the callback output comparing it with the recorded output
         for index, found_item in enumerate(found, start=1):
@@ -117,7 +118,7 @@ class Player(Parser):
             if expected_item == sentinel:
                 raise AssertionError(
                     "Callback returned {} more item/s than expected".format(
-                        length(found)))
+                        self.len(found)))
             self._compare_items(index, found_item, expected_item)
 
         # Check if we expected more data than the found
@@ -125,7 +126,7 @@ class Player(Parser):
         if expected_more != sentinel:
             raise AssertionError(
                 "Expected {} more item/s from callback".format(
-                    length(expected)))
+                    self.len(expected)))
 
     def _playback_cassette(self):
         # Compare attributes set by spider's init

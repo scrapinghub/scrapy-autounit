@@ -3,11 +3,11 @@ import sys
 import shutil
 import random
 
-from scrapy.utils.conf import closest_scrapy_cfg
 from scrapy.commands.genspider import sanitize_module_name
 
 from .parser import Parser
 from .cassette import Cassette
+from .utils import get_base_path
 
 
 TEST_TEMPLATE = """# THIS IS A GENERATED FILE
@@ -35,16 +35,12 @@ class Recorder(Parser):
         self.spider_name = sanitize_module_name(spider.name)
         self.spider_init_attrs = self.get_spider_attrs()
 
-        self.base_path = self.settings.get(
-            'AUTOUNIT_BASE_PATH',
-            default=os.path.join(self._get_project_dir(), 'autounit')
-        )
-
         self.fixture_counters = {}
         self._set_max_fixtures()
 
+        self.base_path = get_base_path(self.settings)
         self._create_dir(self.base_path, exist_ok=True)
-        self._clear_fixtures()        
+        self._clear_fixtures()
 
     def _set_max_fixtures(self):
         self.max_fixtures = self.settings.getint(
@@ -53,11 +49,6 @@ class Recorder(Parser):
         )
         if self.max_fixtures < 10:
             self.max_fixtures = 10
-
-    def _get_project_dir(self):
-        closest_cfg = closest_scrapy_cfg()
-        if closest_cfg:
-            return os.path.dirname(closest_cfg)
 
     def _get_test_dir(self, callback_name):
         components = [self.base_path, 'tests', self.spider_name]
