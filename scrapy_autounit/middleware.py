@@ -1,10 +1,10 @@
 import logging
+import secrets
 
+from scrapy import signals
 from scrapy.exceptions import NotConfigured
 
-from .cassette import Cassette
 from .recorder import Recorder
-from .utils import get_spider_attrs
 
 
 logger = logging.getLogger(__name__)
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class AutounitMiddleware:
     def __init__(self, crawler):
+        self.crawler = crawler
         settings = crawler.settings
 
         spider_mw = settings.getwithbase('SPIDER_MIDDLEWARES').keys()
@@ -29,20 +30,22 @@ class AutounitMiddleware:
                 'Data races in shared object modification may create broken '
                 'tests.')
 
-        self.recorder = Recorder(crawler)
-        self.init_attrs = get_spider_attrs(crawler.spider)
-
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(crawler)
+        mw = cls(crawler)
+        crawler.signals.connect(
+            mw.engine_started, signal=signals.engine_started)
+        return mw
+
+    def engine_started(self):
+        self.recorder = Recorder(self.crawler.spider)
 
     def process_spider_input(self, response, spider):
-        response.meta['_autounit_cassette'] = Cassette(
-            response, spider, self.init_attrs)
+        cassette = self.recorder.new_cassette(response)
+        response.meta['_autounit_cassette'] = cassette
         return None
 
     def process_spider_output(self, response, result, spider):
         cassette = response.meta.pop('_autounit_cassette')
-        out = cassette.parse_callback_result(result)
-        self.recorder.record(cassette)
+        out = self.recorder.record(cassette, result)
         return out

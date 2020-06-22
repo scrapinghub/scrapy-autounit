@@ -1,6 +1,7 @@
+import six
+import types
 from itertools import islice
 
-from scrapy.spiders import CrawlSpider
 from scrapy.utils.misc import walk_modules
 from scrapy.utils.spider import iter_spider_classes
 
@@ -16,11 +17,15 @@ def get_spider_class(spider_name, project_settings):
     return None
 
 
-def get_spider_attrs(spider):
-    filter_attrs = {'crawler', 'settings', 'start_urls'}
-    if isinstance(spider, CrawlSpider):
-        filter_attrs |= {'rules', '_rules'}
-    return {
-        k: v for k, v in spider.__dict__.items()
-        if k not in filter_attrs
-    }
+def python_version():
+    return 2 if six.PY2 else 3
+
+
+def ensure_generator(arg):
+	if isinstance(arg, types.GeneratorType):
+		return arg
+	iterator = iter(arg or ())
+	return (x for x in (arg) or ())
+	 
+	
+
