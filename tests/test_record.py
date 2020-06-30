@@ -380,6 +380,22 @@ class TestRecording(unittest.TestCase):
             spider.record()
             spider.test()
 
+    def test_request_parsing_types_meta_in_output(self):
+        with CaseSpider() as spider:
+            spider.start_requests('''
+                yield scrapy.Request(
+                    'data:text/plain,',
+                    meta={'metadata': [
+                        ('tuples', {'dicts': 'and'}, ['lists', 'in'], 'meta', 1, 20.5)
+                    ]}
+                )
+            ''')
+            spider.parse('''
+                yield {'data': response.request}
+            ''')
+            spider.record()
+            spider.test()
+
     def test_nested_response_in_output(self):
         with CaseSpider() as spider:
             spider.start_requests('''
