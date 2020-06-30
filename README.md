@@ -111,6 +111,11 @@ Sets a list of request fields to be skipped when running your tests.
 Similar to AUTOUNIT_SKIPPED_FIELDS but applied to requests instead of items.  
 `Default: []`
 
+**AUTOUNIT_SKIP_SPIDER_ATTRIBUTES**  
+Sets a list of spider attributes to be skipped when recording and running your tests.  
+This setting can be used to prevent pickling errors with more complicated spiders, e.g. in `SitemapSpider`.
+`Default: []`
+
 **AUTOUNIT_EXCLUDED_HEADERS**  
 Sets a list of headers to exclude from requests recording.  
 For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default, if you want to include them in your fixtures see *`AUTOUNIT_INCLUDED_AUTH_HEADERS`*.  

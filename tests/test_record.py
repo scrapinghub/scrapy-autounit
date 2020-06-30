@@ -523,3 +523,14 @@ class TestRecording(unittest.TestCase):
             """)
             with self.assertRaises(AssertionError):
                 spider.record()
+
+    def test_skip_spider_attribute(self):
+        spider = CaseSpider()
+        spider.unpickleable_attribute = lambda x: 'some unpickleable lambda'
+        spider.parse("""
+            yield scrapy.Request('data:text/plain,')
+        """)
+        with self.assertRaises(AssertionError):
+            spider.record(settings={
+                "AUTOUNIT_SKIP_SPIDER_ATTRIBUTES": ['unpickleable_attribute']
+            })

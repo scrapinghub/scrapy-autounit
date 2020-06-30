@@ -103,9 +103,10 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
 
 def get_filter_attrs(spider):
     attrs = {'crawler', 'settings', 'start_urls'}
+    custom_skipped_attrs = set(spider.settings.getlist("AUTOUNIT_SKIP_SPIDER_ATTRIBUTES"))
     if isinstance(spider, CrawlSpider):
         attrs |= {'rules', '_rules'}
-    return attrs
+    return attrs.union(custom_skipped_attrs)
 
 
 def add_sample(index, test_dir, test_name, data):
