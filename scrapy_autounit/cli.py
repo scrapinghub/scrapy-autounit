@@ -3,13 +3,16 @@ import sys
 import json
 import scrapy
 import argparse
+from glob import glob
 from datetime import datetime
 
 from scrapy.utils.python import to_unicode
 from scrapy.utils.project import inside_project, get_project_settings
 from scrapy.commands.genspider import sanitize_module_name
 
+from .player import Player
 from .cassette import Cassette
+from .recorder import Recorder
 from .utils import get_base_path, get_project_dir
 
 
@@ -90,41 +93,36 @@ class CommandLine:
         data = self.parse_data(cassette.to_dict())
         print(json.dumps(data))
 
-    # def update(self):
-    #     to_update = []
-    #     if self.fixture:
-    #         to_update.append(self.fixture_path)
-    #     else:
-    #         target = os.path.join(self.callback_dir, "*.bin")
-    #         to_update = glob(target)
+    def update(self):
+        to_update = []
+        if self.fixture:
+            to_update.append(self.fixture_path)
+        else:
+            target = os.path.join(self.callback_dir, "*.bin")
+            to_update = glob(target)
 
-    #     for path in to_update:
-    #         data, _, spider, _ = prepare_callback_replay(path)
+        for path in to_update:
+            player = Player.from_fixture(path)
+            output, attrs = player.playback(compare=False)
 
-    #         request = request_from_dict(data['request'], spider)
+            _, parsed = player.parse_callback_output(output)
 
-    #         response_cls = auto_import(
-    #             data['response'].pop('cls', 'scrapy.http.HtmlResponse')
-    #         )
-    #         response = response_cls(
-    #             request=data["request"], **data['response'])
+            cassette = player.cassette
+            cassette.output_data = parsed
+            cassette.init_attrs = attrs['init']
+            cassette.input_attrs = attrs['input']
+            cassette.output_attrs = attrs['output']
 
-    #         data["result"], _ = parse_callback_result(
-    #             request.callback(response), spider
-    #         )
+            Recorder.update_fixture(cassette, path)
 
-    #         fixture_dir, filename = os.path.split(path)
-    #         fixture_index = re.search(r"\d+", filename).group()
-    #         add_sample(fixture_index, fixture_dir, filename, data)
-
-    #         print("Fixture '{}' successfully updated.".format(
-    #             os.path.relpath(path)))
+            print("Fixture '{}' successfully updated.".format(
+                os.path.relpath(path)))
 
     def parse_command(self):
         if self.command == "inspect":
             self.inspect()
-        # elif self.command == "update":
-        #     self.update()
+        elif self.command == "update":
+            self.update()
 
 
 def main():

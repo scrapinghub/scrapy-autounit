@@ -1,9 +1,10 @@
 import os
 import six
 from itertools import islice
+from importlib import import_module
 
 from scrapy.utils.misc import walk_modules
-from scrapy.utils.conf import closest_scrapy_cfg
+from scrapy.utils.conf import closest_scrapy_cfg, init_env
 from scrapy.utils.spider import iter_spider_classes
 
 
@@ -18,6 +19,17 @@ def get_project_dir():
     closest_cfg = closest_scrapy_cfg()
     if closest_cfg:
         return os.path.dirname(closest_cfg)
+
+    init_env()
+    scrapy_module = os.environ.get('SCRAPY_SETTINGS_MODULE')
+    if scrapy_module is None:
+        return None
+
+    try:
+        module = import_module(scrapy_module)
+        return os.path.dirname(os.path.dirname(module.__file__))
+    except ImportError:
+        return None
 
 
 def get_spider_class(spider_name, project_settings):

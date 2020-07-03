@@ -473,11 +473,8 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 5}
             """)
             spider.record()
-            expected_message = "AssertionError: The fixture's data length "\
-                               "doesn't match with the current callback's "\
-                               "output length."
-            with self.assertRaisesRegexp(AssertionError,
-                                         re.escape(expected_message)):
+            expected_message = "more item/s than expected"
+            with self.assertRaisesRegexp(AssertionError, re.escape(expected_message)):
                 spider.test(test_verbosity=True)
 
     def test_attribute_change_raises_error(self):
@@ -503,7 +500,7 @@ class TestRecording(unittest.TestCase):
                     yield scrapy.Request('data:text/plain,', dont_filter=True)
             """)
             spider.record()
-            expected_message = "Output arguments not equal!"
+            expected_message = "Output arguments not equal"
             with self.assertRaisesRegexp(AssertionError,
                                          re.escape(expected_message)):
                 spider.test(test_verbosity=True)

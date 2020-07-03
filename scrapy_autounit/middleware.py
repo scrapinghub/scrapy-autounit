@@ -1,3 +1,4 @@
+import pickle
 import logging
 
 from scrapy import signals
@@ -41,10 +42,10 @@ class AutounitMiddleware:
 
     def process_spider_input(self, response, spider):
         cassette = self.recorder.new_cassette(response)
-        response.meta['_autounit_cassette'] = cassette
+        response.meta['_autounit_cassette'] = pickle.dumps(cassette, protocol=2)
         return None
 
     def process_spider_output(self, response, result, spider):
-        cassette = response.meta.pop('_autounit_cassette')
+        cassette = pickle.loads(response.meta.pop('_autounit_cassette'))
         out = self.recorder.record(cassette, result)
         return out
