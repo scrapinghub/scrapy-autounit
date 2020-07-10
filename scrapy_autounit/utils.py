@@ -95,7 +95,7 @@ def get_or_create_test_dir(base_path, spider_name, callback_name, extra=None):
         test_dir = os.path.join(test_dir, component) if test_dir else component
         create_dir(test_dir, parents=True, exist_ok=True)
         init_file = os.path.join(test_dir, '__init__.py')
-        with open(init_file, 'a'):
+        with open(init_file, 'a+'):
             os.utime(init_file, None)
     test_name = '__'.join(components[2:])
     return test_dir, test_name
