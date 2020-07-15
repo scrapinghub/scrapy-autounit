@@ -45,3 +45,10 @@ def get_spider_class(spider_name, project_settings):
 
 def python_version():
     return 2 if six.PY2 else 3
+
+
+def generate_test(fixture_path, encoding='utf-8'):
+    raise AssertionError(
+        "This spider's tests and fixtures are from an old version and need to be updated. "
+        "Please update them by using the `autounit` command line utility. "
+        "See `autounit update -h` for more help.")

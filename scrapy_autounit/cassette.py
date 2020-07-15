@@ -14,10 +14,11 @@ class Cassette:
     """
     FIXTURE_VERSION = 2
 
-    def __init__(self, spider):
-        self.spider_name = spider.name
-        self.middlewares = self._get_middlewares(spider.settings)
-        self.included_settings = self._get_included_settings(spider.settings)
+    def __init__(self, spider=None):
+        if spider:
+            self.spider_name = spider.name
+            self.middlewares = self._get_middlewares(spider.settings)
+            self.included_settings = self._get_included_settings(spider.settings)
         self.python_version = python_version()
 
         # Set by Recorder.new_cassette

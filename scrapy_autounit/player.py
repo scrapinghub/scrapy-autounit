@@ -117,10 +117,12 @@ class Player(Parser):
         )
 
     def _compare_outputs(self, found, expected):
+        out = []
         sentinel = object()
 
         # Iterate the callback output comparing it with the recorded output
         for index, found_item in enumerate(found, start=1):
+            out.append(found_item)
             expected_item = next(expected, sentinel)
             if expected_item == sentinel:
                 raise AssertionError(
@@ -135,6 +137,8 @@ class Player(Parser):
             raise AssertionError(
                 "Expected {} more item/s from callback ({})".format(
                     self._len(expected), self.cassette.filename))
+
+        return out
 
     def _compare_attrs(self, attrs):
         # Compare attributes set by spider's init
@@ -184,26 +188,25 @@ class Player(Parser):
 
         # Run the callback
         cb_kwargs = getattr(request, "cb_kwargs", {})
-        output = arg_to_iter(request.callback(response, **cb_kwargs))
+        cb_output = arg_to_iter(request.callback(response, **cb_kwargs))
 
         # Run middlewares process_spider_output methods
         middlewares.reverse()
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
-                output = mw.process_spider_output(
-                    response, output, self.spider)
+                cb_output = mw.process_spider_output(
+                    response, cb_output, self.spider)
 
-        found = iter(output)
+        found = iter(cb_output)
         expected = iter(self.cassette.output_data)
 
         if compare:
-            self._compare_outputs(found, expected)
+            out = self._compare_outputs(found, expected)
             attrs['output'] = self.get_spider_attrs()
             self._compare_attrs(attrs)
         else:
-            # Just exhaust the callback output so we can get output attributes
-            for _ in found:
-                pass
+            # Exhaust the callback output so we can get output attributes
+            out = [x for x in found]
             attrs['output'] = self.get_spider_attrs()
 
-        return output, attrs
+        return (x for x in out), attrs
