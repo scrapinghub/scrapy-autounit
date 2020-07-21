@@ -146,9 +146,9 @@ class CommandLine:
             return to_unicode(data)
         elif isinstance(data, datetime):
             return data.isoformat()
-        elif isinstance(data, (int, float)):
+        elif isinstance(data, (int, float, str)):
             return data
-        return str(data)
+        return repr(data)
 
     def inspect(self):
         cassette = Cassette.from_fixture(self.fixture_path)
