@@ -3,6 +3,17 @@
 [![AppVeyor](https://ci.appveyor.com/api/projects/status/github/scrapinghub/scrapy-autounit?branch=master&svg=true)](https://ci.appveyor.com/project/scrapinghub/scrapy-autounit/branch/master)
 [![PyPI Version](https://img.shields.io/pypi/v/scrapy-autounit.svg?color=blue)](https://pypi.python.org/pypi/scrapy-autounit/)
 
+<br />
+## Documentation
+- [Overview](#overview)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Caveats](#caveats)
+- [Settings](#settings)
+- [Command Line Interface](#command-line-interface)
+- [Internals](#internals)
+
+<br />
 ## Overview
 
 Scrapy-Autounit is an automatic test generation tool for your Scrapy spiders.
@@ -38,12 +49,14 @@ my_project
 └── scrapy.cfg
 ```
 
+<br />
 ## Installation
 
 ```
 pip install scrapy_autounit
 ```
 
+<br />
 ## Usage
 
 Add the spider middleware to your `SPIDER_MIDDLEWARES` setting (no specific order required):  
@@ -82,6 +95,7 @@ $ python -m unittest discover autounit/tests/my_spider/
 $ python -m unittest discover autounit/tests/my_spider/my_callback/
 ```
 
+<br />
 ## Caveats
 - Keep in mind that as long as `AUTOUNIT_ENABLED` is on, each time you run a spider tests/fixtures are going to be generated for its callbacks.  
 This means that if you have your tests/fixtures ready to go, this setting should be off to prevent undesired overwrites.  
@@ -90,6 +104,7 @@ For example, this setting should be off when running your spiders in Scrapy Clou
 
 - Autounit uses an internal `_autounit_cassette` key in requests' meta dictionaries. Avoid using/overriding this key in your spiders when adding data to meta to prevent unexpected behaviours.  
 
+<br />
 ## Settings
 
 **AUTOUNIT_ENABLED**  
@@ -130,6 +145,7 @@ This is an extra string element to add to the test path and name between the spi
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.
 
+<br />
 ## Command line interface
 
 - [`autounit inspect`](#autounit-inspect): inspects fixtures returning a JSON object
@@ -215,6 +231,7 @@ $ autounit update -s my_spider -c my_callback
 $ autounit update -s my_spider -c my_callback -f 5
 ```
 
+<br />
 ## Internals
 
 The `AutounitMiddleware` uses a [`Recorder`](scrapy_autounit/recorder.py) to record [`Cassettes`](scrapy_autounit/cassette.py) in binary fixtures.  
