@@ -199,4 +199,4 @@ class Player(Parser):
             out = [x for x in found]
             attrs['output'] = self.get_spider_attrs()
 
-        return (x for x in out), attrs
+        return iter(out), attrs
