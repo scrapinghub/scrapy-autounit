@@ -91,7 +91,7 @@ class CommandLine:
         new.request = old['request']
         new.response = old['response']
         new.init_attrs = {}
-        new.input_attrs = old.get('spider_args_in', None) or old.get('spider_args', {})
+        new.input_attrs = old.get('spider_args_in') or old.get('spider_args') or {}
         new.output_attrs = old.get('spider_args_out', {})
         new.output_data = old['result']
         return new
