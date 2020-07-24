@@ -1,19 +1,19 @@
+import argparse
+import json
 import os
+import pickle
 import re
 import sys
-import json
-import pickle
-import scrapy
-import argparse
-from glob import glob
 from datetime import datetime
+from glob import glob
 
-from scrapy.utils.python import to_unicode
-from scrapy.utils.project import inside_project, get_project_settings
+import scrapy
 from scrapy.commands.genspider import sanitize_module_name
+from scrapy.utils.project import inside_project, get_project_settings
+from scrapy.utils.python import to_unicode
 
-from .player import Player
 from .cassette import Cassette
+from .player import Player
 from .recorder import Recorder, TEST_TEMPLATE
 from .utils import get_base_path, get_project_dir, python_version
 
@@ -44,9 +44,7 @@ class CommandLine:
             self.spider = sanitize_module_name(self.spider)
             self.callbacks_dir = self._get_callbacks_dir(self.spider)
             if not os.path.isdir(self.callbacks_dir):
-                self._error(
-                    "No recorded data found "
-                    "for spider '{}'".format(self.spider))
+                self._error("No recorded data found for spider '{}'".format(self.spider))
 
             if self.callback:
                 self.callback_dir = os.path.join(self.callbacks_dir, self.callback)
@@ -56,8 +54,7 @@ class CommandLine:
                         "'{}' from '{}' spider".format(self.callback, self.spider))
 
                 if self.fixture:
-                    self.fixture_path = os.path.join(
-                        self.callback_dir, self.parse_fixture_arg())
+                    self.fixture_path = os.path.join(self.callback_dir, self.parse_fixture_arg())
                     if not os.path.isfile(self.fixture_path):
                         self._error("Fixture '{}' not found".format(self.fixture_path))
 

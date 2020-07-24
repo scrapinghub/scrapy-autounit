@@ -2,13 +2,12 @@ from importlib import import_module
 
 from scrapy import signals
 from scrapy.exceptions import NotConfigured
-from scrapy.utils.reqser import request_from_dict
 from scrapy.utils.misc import load_object, arg_to_iter
-
+from scrapy.utils.reqser import request_from_dict
 from testfixtures import compare
 
-from .parser import Parser
 from .cassette import Cassette
+from .parser import Parser
 from .utils import python_version
 
 
@@ -32,8 +31,7 @@ class Player(Parser):
     def _create_instance(self, objcls, settings, crawler, *args, **kwargs):
         if settings is None:
             if crawler is None:
-                raise ValueError(
-                    "Specifiy at least one of settings and crawler.")
+                raise ValueError("Specifiy at least one of settings and crawler.")
             settings = crawler.settings
         if crawler and hasattr(objcls, 'from_crawler'):
             return objcls.from_crawler(crawler, *args, **kwargs)
@@ -51,23 +49,21 @@ class Player(Parser):
         current = python_version()
         recorded = self.cassette.python_version
         assert current == recorded, (
-            'Trying to test python {} fixture '
-            'while running python {}'.format(recorded, current)
+            'Trying to test python {} fixture while running python {}'.format(recorded, current)
         )
 
     def _init_spider(self):
         spider = self.cassette.get_spider()
         spider.start_requests()
-        spider.crawler.signals.send_catch_log(
-            signal=signals.spider_opened,
-            spider=spider)
+        spider.crawler.signals.send_catch_log(signal=signals.spider_opened, spider=spider)
         self.spider = spider
         self.crawler = spider.crawler
 
     def _http_objects(self):
         request = request_from_dict(self.cassette.request, self.spider)
-        response_cls = self._auto_import(self.cassette.response.pop(
-            'cls', 'scrapy.http.HtmlResponse'))
+        response_cls = self._auto_import(
+            self.cassette.response.pop('cls', 'scrapy.http.HtmlResponse')
+        )
         response = response_cls(request=request, **self.cassette.response)
         return request, response
 
@@ -76,8 +72,7 @@ class Player(Parser):
         for mw_path in self.cassette.middlewares:
             try:
                 mw_cls = load_object(mw_path)
-                mw = self._create_instance(
-                    mw_cls, self.spider.settings, self.crawler)
+                mw = self._create_instance(mw_cls, self.spider.settings, self.crawler)
                 middlewares.append(mw)
             except NotConfigured:
                 continue
@@ -110,10 +105,7 @@ class Player(Parser):
         self._compare(
             expected=expected_data,
             found=found_data,
-            message=(
-                "Callback output #{} doesn't "
-                "match recorded output".format(index)
-            )
+            message="Callback output #{} doesn't match recorded output".format(index),
         )
 
     def _compare_outputs(self, found, expected):
@@ -126,8 +118,7 @@ class Player(Parser):
             expected_item = next(expected, sentinel)
             if expected_item == sentinel:
                 raise AssertionError(
-                    "Callback returned {} more item/s "
-                    "than expected ({})".format(
+                    "Callback returned {} more item/s than expected ({})".format(
                         self._len(found), self.cassette.filename))
             self._compare_items(index, found_item, expected_item)
 
@@ -194,8 +185,7 @@ class Player(Parser):
         middlewares.reverse()
         for mw in middlewares:
             if hasattr(mw, 'process_spider_output'):
-                cb_output = mw.process_spider_output(
-                    response, cb_output, self.spider)
+                cb_output = mw.process_spider_output(response, cb_output, self.spider)
 
         found = iter(cb_output)
         expected = iter(self.cassette.output_data)

@@ -1,9 +1,9 @@
-import unittest
-import tempfile
-import subprocess
 import os
-import shutil
 import re
+import shutil
+import subprocess
+import tempfile
+import unittest
 
 
 SPIDER_TEMPLATE = '''
@@ -155,10 +155,7 @@ class CaseSpider(object):
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
-        command_args = [
-            'scrapy', 'crawl', self._spider_name,
-            '-s', 'AUTOUNIT_ENABLED=1',
-        ]
+        command_args = ['scrapy', 'crawl', self._spider_name, '-s', 'AUTOUNIT_ENABLED=1']
         for k, v in (args or {}).items():
             command_args.append('-a')
             command_args.append('{}={}'.format(k, v))
@@ -187,9 +184,7 @@ class CaseSpider(object):
         env = os.environ.copy()
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         result = run(
-            [
-                'python', '-m', 'unittest', 'discover', '-v'
-            ],
+            ['python', '-m', 'unittest', 'discover', '-v'],
             env=env,
             cwd=self.dir,
             stdout=subprocess.PIPE,
@@ -501,8 +496,7 @@ class TestRecording(unittest.TestCase):
             """)
             spider.record()
             expected_message = "Output arguments not equal"
-            with self.assertRaisesRegexp(AssertionError,
-                                         re.escape(expected_message)):
+            with self.assertRaisesRegexp(AssertionError, re.escape(expected_message)):
                 spider.test(test_verbosity=True)
 
     def test_missing_parse_method_raises_assertionerror(self):

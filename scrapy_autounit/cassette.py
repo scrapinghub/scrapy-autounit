@@ -1,5 +1,5 @@
-import zlib
 import pickle
+import zlib
 
 from scrapy.crawler import Crawler
 from scrapy.utils.conf import build_component_list
@@ -40,10 +40,8 @@ class Cassette:
         return cassette
 
     def _get_middlewares(self, settings):
-        full_list = build_component_list(
-            settings.getwithbase('SPIDER_MIDDLEWARES'))
-        autounit_mw_path = list(filter(
-            lambda x: x.endswith('AutounitMiddleware'), full_list))[0]
+        full_list = build_component_list(settings.getwithbase('SPIDER_MIDDLEWARES'))
+        autounit_mw_path = list(filter(lambda x: x.endswith('AutounitMiddleware'), full_list))[0]
         start = full_list.index(autounit_mw_path)
         mw_paths = [mw for mw in full_list[start:] if mw != autounit_mw_path]
         return mw_paths

@@ -1,10 +1,10 @@
 import os
-import six
-from itertools import islice
 from importlib import import_module
+from itertools import islice
 
-from scrapy.utils.misc import walk_modules
+import six
 from scrapy.utils.conf import closest_scrapy_cfg, init_env
+from scrapy.utils.misc import walk_modules
 from scrapy.utils.spider import iter_spider_classes
 
 

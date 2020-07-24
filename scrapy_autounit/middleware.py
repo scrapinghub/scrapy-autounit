@@ -1,5 +1,5 @@
-import pickle
 import logging
+import pickle
 
 from scrapy import signals
 from scrapy.exceptions import NotConfigured
@@ -17,9 +17,7 @@ class AutounitMiddleware:
 
         spider_mw = settings.getwithbase('SPIDER_MIDDLEWARES').keys()
         if not any(self.__class__.__name__ in mw for mw in spider_mw):
-            raise ValueError(
-                '{} must be in SPIDER_MIDDLEWARES'.format(
-                    self.__class__.__name__))
+            raise ValueError('{} must be in SPIDER_MIDDLEWARES'.format(self.__class__.__name__))
 
         if not settings.getbool('AUTOUNIT_ENABLED'):
             raise NotConfigured('scrapy-autounit is not enabled')
@@ -27,14 +25,13 @@ class AutounitMiddleware:
         if settings.getint('CONCURRENT_REQUESTS') > 1:
             logger.warn(
                 'Recording with concurrency > 1! '
-                'Data races in shared object modification may create broken '
-                'tests.')
+                'Data races in shared object modification may create broken tests.'
+            )
 
     @classmethod
     def from_crawler(cls, crawler):
         mw = cls(crawler)
-        crawler.signals.connect(
-            mw.engine_started, signal=signals.engine_started)
+        crawler.signals.connect(mw.engine_started, signal=signals.engine_started)
         return mw
 
     def engine_started(self):

@@ -1,12 +1,12 @@
 import os
-import sys
-import shutil
 import random
+import shutil
+import sys
 
 from scrapy.commands.genspider import sanitize_module_name
 
-from .parser import Parser
 from .cassette import Cassette
+from .parser import Parser
 from .utils import get_base_path
 
 
@@ -15,6 +15,7 @@ TEST_TEMPLATE = """# THIS IS A GENERATED FILE
 import os
 import unittest
 from glob import glob
+
 from scrapy_autounit.player import Player
 
 
@@ -25,6 +26,7 @@ class AutoUnit(unittest.TestCase):
         for fixture in fixtures:
             player = Player.from_fixture(fixture)
             player.playback()
+
 
 if __name__ == '__main__':
     unittest.main()
@@ -51,10 +53,7 @@ class Recorder(Parser):
             outfile.write(cassette.pack())
 
     def _set_max_fixtures(self):
-        self.max_fixtures = self.settings.getint(
-            'AUTOUNIT_MAX_FIXTURES_PER_CALLBACK',
-            default=10
-        )
+        self.max_fixtures = self.settings.getint('AUTOUNIT_MAX_FIXTURES_PER_CALLBACK', default=10)
         if self.max_fixtures < 10:
             self.max_fixtures = 10
 
