@@ -5,7 +5,7 @@ from scrapy.crawler import Crawler
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.project import get_project_settings
 
-from .utils import get_spider_class, python_version
+from .utils import get_spider_class
 
 
 class Cassette:
@@ -19,7 +19,7 @@ class Cassette:
             self.spider_name = spider.name
             self.middlewares = self._get_middlewares(spider.settings)
             self.included_settings = self._get_included_settings(spider.settings)
-        self.python_version = python_version()
+        self.python_version = sys.version_info.major
 
         # Set by Recorder.new_cassette
         self.request = None

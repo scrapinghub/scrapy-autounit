@@ -1,4 +1,5 @@
 from importlib import import_module
+import sys
 
 from scrapy import signals
 from scrapy.exceptions import NotConfigured
@@ -8,7 +9,6 @@ from testfixtures import compare
 
 from .cassette import Cassette
 from .parser import Parser
-from .utils import python_version
 
 
 class Player(Parser):
@@ -46,7 +46,7 @@ class Player(Parser):
                 obj.pop(field, None)
 
     def _check_python_version(self):
-        current = python_version()
+        current = sys.version_info.major
         recorded = self.cassette.python_version
         assert current == recorded, (
             'Trying to test python {} fixture while running python {}'.format(recorded, current)

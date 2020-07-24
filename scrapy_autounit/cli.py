@@ -15,7 +15,7 @@ from scrapy.utils.python import to_unicode
 from .cassette import Cassette
 from .player import Player
 from .recorder import Recorder, TEST_TEMPLATE
-from .utils import get_base_path, get_project_dir, python_version
+from .utils import get_base_path, get_project_dir
 
 
 class CommandLine:
@@ -87,7 +87,7 @@ class CommandLine:
         new.spider_name = old['spider_name']
         new.middlewares = old['middlewares']
         new.included_settings = old['settings']
-        new.python_version = old.get('python_version', python_version())
+        new.python_version = old.get('python_version', sys.version_info.major)
         new.request = old['request']
         new.response = old['response']
         new.init_attrs = {}

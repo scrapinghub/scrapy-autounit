@@ -2,7 +2,6 @@ import os
 from importlib import import_module
 from itertools import islice
 
-import six
 from scrapy.utils.conf import closest_scrapy_cfg, init_env
 from scrapy.utils.misc import walk_modules
 from scrapy.utils.spider import iter_spider_classes
@@ -41,10 +40,6 @@ def get_spider_class(spider_name, project_settings):
                 if spider_class.name == spider_name:
                     return spider_class
     return None
-
-
-def python_version():
-    return 2 if six.PY2 else 3
 
 
 def generate_test(fixture_path, encoding='utf-8'):
