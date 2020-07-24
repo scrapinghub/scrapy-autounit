@@ -87,4 +87,4 @@ class Parser:
                 'type': 'request' if is_request else 'item',
                 'data': data
             })
-        return (x for x in original), parsed
+        return iter(original), parsed
