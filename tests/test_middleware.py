@@ -7,15 +7,11 @@ class DelAttrAutounitMiddleware(AutounitMiddleware, object):
         if hasattr(spider, 'test_attr'):
             delattr(spider, 'test_attr')
 
-        return super(self.__class__, self).process_spider_output(response,
-                                                                 result,
-                                                                 spider)
+        return super(self.__class__, self).process_spider_output(response, result, spider)
 
 
 class DelObjectsAutounitMiddleware(AutounitMiddleware, object):
 
     def process_spider_output(self, response, result, spider):
         result = []
-        return super(self.__class__, self).process_spider_output(response,
-                                                                 result,
-                                                                 spider)
+        return super(self.__class__, self).process_spider_output(response, result, spider)

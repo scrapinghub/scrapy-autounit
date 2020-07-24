@@ -1,16 +1,15 @@
 import copy
-from scrapy.spiders import CrawlSpider
+
 from scrapy.http import Request, Response
+from scrapy.spiders import CrawlSpider
 from scrapy.utils.reqser import request_to_dict
 
 
 class Parser:
     def _clean_headers(self, headers):
-        excluded = self.spider.settings.get(
-            'AUTOUNIT_EXCLUDED_HEADERS', default=[])
+        excluded = self.spider.settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
         auth_headers = ['Authorization', 'Proxy-Authorization']
-        included = self.spider.settings.get(
-            'AUTOUNIT_INCLUDED_AUTH_HEADERS', default=[])
+        included = self.spider.settings.get('AUTOUNIT_INCLUDED_AUTH_HEADERS', default=[])
         excluded.extend([h for h in auth_headers if h not in included])
         for header in excluded:
             headers.pop(header, None)
