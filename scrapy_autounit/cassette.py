@@ -14,23 +14,29 @@ class Cassette:
     """
     FIXTURE_VERSION = 2
 
-    def __init__(self, spider=None):
+    def __init__(
+        self,
+        spider=None,
+        request=None,
+        response=None,
+        init_attrs=None,
+        input_attrs=None,
+        output_attrs=None,
+        output_data=None,
+        filename=None,
+    ):
         if spider:
             self.spider_name = spider.name
             self.middlewares = self._get_middlewares(spider.settings)
             self.included_settings = self._get_included_settings(spider.settings)
+        self.request = request
+        self.response = response
+        self.init_attrs = init_attrs
+        self.input_attrs = input_attrs
+        self.output_attrs = output_attrs
+        self.output_data = output_data
+        self.filename = filename
         self.python_version = sys.version_info.major
-
-        # Set by Recorder.new_cassette
-        self.request = None
-        self.response = None
-        self.init_attrs = None
-        self.input_attrs = None
-
-        # Set by Recorder.record
-        self.filename = None
-        self.output_data = None
-        self.output_attrs = None
 
     @classmethod
     def from_fixture(cls, fixture):

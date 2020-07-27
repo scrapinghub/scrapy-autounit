@@ -103,12 +103,13 @@ class Recorder(Parser):
 
     def new_cassette(self, response_obj):
         request, response = self.parse_response(response_obj)
-        cassette = Cassette(self.spider)
-        cassette.request = request
-        cassette.response = response
-        cassette.init_attrs = self.spider_init_attrs
-        cassette.input_attrs = self.get_spider_attrs()
-        return cassette
+        return Cassette(
+            spider=self.spider,
+            request=request,
+            response=response,
+            init_attrs=self.spider_init_attrs,
+            input_attrs=self.get_spider_attrs(),
+        )
 
     def record(self, cassette, output):
         original, parsed = self.parse_callback_output(output)
