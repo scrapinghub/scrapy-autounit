@@ -1,4 +1,5 @@
 import pickle
+import sys
 import zlib
 
 from scrapy.crawler import Crawler
