@@ -15,6 +15,7 @@ setuptools.setup(
     url='https://github.com/scrapinghub/scrapy-autounit',
     packages=setuptools.find_packages(),
     classifiers=[
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
