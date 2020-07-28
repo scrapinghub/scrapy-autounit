@@ -84,7 +84,7 @@ class CommandLine:
         encoding = recorded['encoding']
         old = pickle.loads(recorded['data'], encoding=encoding)
         return Cassette(
-            spider=old['spider_name'],
+            spider_name=old['spider_name'],
             request=old['request'],
             response=old['response'],
             init_attrs={},
