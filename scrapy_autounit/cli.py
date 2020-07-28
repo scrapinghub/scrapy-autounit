@@ -83,18 +83,18 @@ class CommandLine:
     def _from_legacy_fixture(self, recorded):
         encoding = recorded['encoding']
         old = pickle.loads(recorded['data'], encoding=encoding)
-        new = Cassette()
-        new.spider_name = old['spider_name']
-        new.middlewares = old['middlewares']
-        new.included_settings = old['settings']
-        new.python_version = old.get('python_version', sys.version_info.major)
-        new.request = old['request']
-        new.response = old['response']
-        new.init_attrs = {}
-        new.input_attrs = old.get('spider_args_in') or old.get('spider_args') or {}
-        new.output_attrs = old.get('spider_args_out', {})
-        new.output_data = old['result']
-        return new
+        return Cassette(
+            spider=old['spider_name'],
+            request=old['request'],
+            response=old['response'],
+            init_attrs={},
+            input_attrs=old.get('spider_args_in') or old.get('spider_args') or {},
+            output_attrs=old.get('spider_args_out', {}),
+            output_data=old['result'],
+            middlewares=old['middlewares'],
+            included_settings=old['settings'],
+            python_version=old.get('python_version', sys.version_info.major),
+        )
 
     def _update_legacy_test(self, path, cassette):
         path_dir = os.path.dirname(path)

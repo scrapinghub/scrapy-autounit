@@ -18,18 +18,26 @@ class Cassette:
     def __init__(
         self,
         spider=None,
+        spider_name=None,
         request=None,
         response=None,
         init_attrs=None,
         input_attrs=None,
         output_attrs=None,
         output_data=None,
+        middlewares=None,
+        included_settings=None,
+        python_version=None,
         filename=None,
     ):
+        self.spider_name = spider_name
+        self.middlewares = middlewares
+        self.included_settings = included_settings
         if spider:
             self.spider_name = spider.name
             self.middlewares = self._get_middlewares(spider.settings)
             self.included_settings = self._get_included_settings(spider.settings)
+
         self.request = request
         self.response = response
         self.init_attrs = init_attrs
@@ -37,7 +45,7 @@ class Cassette:
         self.output_attrs = output_attrs
         self.output_data = output_data
         self.filename = filename
-        self.python_version = sys.version_info.major
+        self.python_version = python_version or sys.version_info.major
 
     @classmethod
     def from_fixture(cls, fixture):
