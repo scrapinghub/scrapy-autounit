@@ -4,3 +4,5 @@ dist/
 .python-version
 __pycache__
 .tox/
+.direnv/
+.envrc
