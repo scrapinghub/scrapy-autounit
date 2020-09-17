@@ -68,9 +68,11 @@ class Parser:
         elif isinstance(_object, dict):
             for k, v in _object.items():
                 _object[k] = self.parse_object(v)
-        elif isinstance(_object, (list, tuple)):
+        elif isinstance(_object, list):
             for i, v in enumerate(_object):
                 _object[i] = self.parse_object(v)
+        elif isinstance(_object, tuple):
+            _object = tuple([self.parse_object(o) for o in _object])
         return _object
 
     def parse_callback_output(self, output):
