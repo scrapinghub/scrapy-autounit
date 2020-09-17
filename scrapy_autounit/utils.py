@@ -180,9 +180,11 @@ def parse_object(_object, spider):
     elif isinstance(_object, dict):
         for k, v in _object.items():
             _object[k] = parse_object(v, spider)
-    elif isinstance(_object, (list, tuple)):
+    elif isinstance(_object, list):
         for i, v in enumerate(_object):
             _object[i] = parse_object(v, spider)
+    elif isinstance(_object, tuple):
+        _object = tuple([parse_object(o, spider) for o in _object])
     return _object
 
 
