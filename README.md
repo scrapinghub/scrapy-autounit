@@ -106,40 +106,57 @@ For example, this setting should be off when running your spiders in Scrapy Clou
 
 ## Settings
 
-**AUTOUNIT_ENABLED**  
+###### General
+
+- **AUTOUNIT_ENABLED**  
 Set this to `True` or `False` to enable or disable unit test generation.
 
-**AUTOUNIT_MAX_FIXTURES_PER_CALLBACK**  
+- **AUTOUNIT_MAX_FIXTURES_PER_CALLBACK**  
 Sets the maximum number of fixtures to store per callback.  
 `Minimum: 10`  
 `Default: 10`
 
-**AUTOUNIT_SKIPPED_FIELDS**  
+- **AUTOUNIT_EXTRA_PATH**  
+This is an extra string element to add to the test path and name between the spider name and callback name. You can use this to separate tests from the same spider with different configurations.  
+`Default: None`
+
+###### Output
+
+- **AUTOUNIT_DONT_TEST_OUTPUT_FIELDS**  
 Sets a list of fields to be skipped from testing your callbacks' items. It's useful to bypass fields that return a different value on each run.  
 For example if you have a field that is always set to `datetime.now()` in your spider, you probably want to add that field to this list to be skipped on tests. Otherwise you'll get a different value when you're generating your fixtures than when you're running your tests, making your tests fail.  
 `Default: []`
 
-**AUTOUNIT_REQUEST_SKIPPED_FIELDS**  
-Sets a list of request fields to be skipped when running your tests.  
-Similar to AUTOUNIT_SKIPPED_FIELDS but applied to requests instead of items.  
+###### Requests
+
+- **AUTOUNIT_DONT_TEST_REQUEST_ATTRS**  
+Sets a list of request attributes to be skipped when running your tests.  
 `Default: []`
 
-**AUTOUNIT_EXCLUDED_HEADERS**  
+- **AUTOUNIT_DONT_RECORD_HEADERS**  
 Sets a list of headers to exclude from requests recording.  
-For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default, if you want to include them in your fixtures see *`AUTOUNIT_INCLUDED_AUTH_HEADERS`*.  
+For security reasons, Autounit already excludes `Authorization` and `Proxy-Authorization` headers by default, if you want to record them in your fixtures see *`AUTOUNIT_RECORD_AUTH_HEADERS`*.  
 `Default: []`  
 
-**AUTOUNIT_INCLUDED_AUTH_HEADERS**  
+- **AUTOUNIT_RECORD_AUTH_HEADERS**  
 If you want to include `Authorization` or `Proxy-Authorization` headers in your fixtures, add one or both of them to this list.  
 `Default: []`
 
-**AUTOUNIT_INCLUDED_SETTINGS**  
-Sets a list of settings names to be recorded in the generated test case.  
+###### Spider attributes
+
+- **AUTOUNIT_DONT_RECORD_SPIDER_ATTRS**  
+Sets a list of spider attributes that won't be recorded into your fixtures.  
 `Default: []`
 
-**AUTOUNIT_EXTRA_PATH**  
-This is an extra string element to add to the test path and name between the spider name and callback name. You can use this to separate tests from the same spider with different configurations.  
-`Default: None`
+- **AUTOUNIT_DONT_TEST_SPIDER_ATTRS**  
+Sets a list of spider attributes to be skipped from testing your callbacks. These attributes will still be recorded.  
+`Default: []`
+
+###### Settings
+
+- **AUTOUNIT_RECORD_SETTINGS**  
+Sets a list of settings names to be recorded in the generated test case.  
+`Default: []`
 
 ---
 **Note**: Remember that you can always apply any of these settings per spider including them in your spider's `custom_settings` class attribute - see https://docs.scrapy.org/en/latest/topics/settings.html#settings-per-spider.  
