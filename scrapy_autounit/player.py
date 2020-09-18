@@ -140,22 +140,34 @@ class Player(Parser):
 
         return out
 
+    def _filter_attrs(self, attrs):
+        dont_test_attrs = self.spider.settings.get(
+            'AUTOUNIT_DONT_TEST_SPIDER_ATTRS', [])
+        for attr in dont_test_attrs:
+            attrs.pop(attr)
+
     def _compare_attrs(self, attrs):
-        # Compare attributes set by spider's init
+        # Filter and compare attributes set by spider's init
+        self._filter_attrs(self.cassette.init_attrs)
+        self._filter_attrs(attrs['init'])
         self._compare(
             expected=self.cassette.init_attrs,
             found=attrs['init'],
             message="Init attributes not equal"
         )
 
-        # Compare spider attributes before the callback
+        # Filter and compare spider attributes before the callback
+        self._filter_attrs(self.cassette.input_attrs)
+        self._filter_attrs(attrs['input'])
         self._compare(
             expected=self.cassette.input_attrs,
             found=attrs['input'],
             message="Input arguments not equal"
         )
 
-        # Compare spider attributes after callback
+        # Filter and compare spider attributes after callback
+        self._filter_attrs(self.cassette.output_attrs)
+        self._filter_attrs(attrs['output'])
         self._compare(
             expected=self.cassette.output_attrs,
             found=attrs['output'],
@@ -170,13 +182,13 @@ class Player(Parser):
             print(warning)
 
         attrs = {}
-        attrs['init'] = self.get_spider_attrs()
+        attrs['init'] = self.spider_attrs()
 
         # Set spider attributes as they were before the callback
         for k, v in self.cassette.input_attrs.items():
             setattr(self.spider, k, v)
 
-        attrs['input'] = self.get_spider_attrs()
+        attrs['input'] = self.spider_attrs()
 
         # Create Request and Response objects
         request, response = self._http_objects()
@@ -204,11 +216,11 @@ class Player(Parser):
 
         if compare:
             out = self._compare_outputs(found, expected)
-            attrs['output'] = self.get_spider_attrs()
+            attrs['output'] = self.spider_attrs()
             self._compare_attrs(attrs)
         else:
             # Exhaust the callback output so we can get output attributes
             out = [x for x in found]
-            attrs['output'] = self.get_spider_attrs()
+            attrs['output'] = self.spider_attrs()
 
         return iter(out), attrs

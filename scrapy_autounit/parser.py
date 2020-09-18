@@ -52,13 +52,19 @@ class Parser:
             'encoding': response.encoding,
         }
 
-    def get_spider_attrs(self):
-        filter_attrs = {'crawler', 'settings', 'start_urls'}
+    def spider_attrs(self):
+        to_filter = {'crawler', 'settings', 'start_urls'}
+
         if isinstance(self.spider, CrawlSpider):
-            filter_attrs |= {'rules', '_rules'}
+            to_filter |= {'rules', '_rules'}
+
+        dont_record_attrs = set(
+            self.spider.settings.get('AUTOUNIT_DONT_RECORD_SPIDER_ATTRS', []))
+        to_filter |= dont_record_attrs
+
         return {
             k: v for k, v in self.spider.__dict__.items()
-            if k not in filter_attrs
+            if k not in to_filter
         }
 
     def parse_response(self, response_obj):

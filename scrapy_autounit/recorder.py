@@ -38,12 +38,10 @@ class Recorder(Parser):
         self.spider = spider
         self.settings = spider.settings
         self.spider_name = sanitize_module_name(spider.name)
-        self.spider_init_attrs = self.get_spider_attrs()
+        self.spider_init_attrs = self.spider_attrs()
 
         self.fixture_counters = {}
         self._set_max_fixtures()
-
-        self.dont_record = self.settings.get('AUTOUNIT_DONT_RECORD', {})
 
         self.base_path = get_base_path(self.settings)
         self._create_dir(self.base_path, exist_ok=True)
@@ -110,14 +108,14 @@ class Recorder(Parser):
             request=request,
             response=response,
             init_attrs=self.spider_init_attrs,
-            input_attrs=self.get_spider_attrs(),
+            input_attrs=self.spider_attrs(),
         )
 
     def record(self, cassette, output):
         original, parsed = self.parse_callback_output(output)
 
         cassette.output_data = parsed
-        cassette.output_attrs = self.get_spider_attrs()
+        cassette.output_attrs = self.spider_attrs()
 
         callback_name = cassette.request['callback']
         callback_counter = self.fixture_counters.setdefault(callback_name, 0)
