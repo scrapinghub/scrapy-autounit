@@ -62,7 +62,10 @@ class Cassette:
         return mw_paths
 
     def _get_included_settings(self, settings):
-        names = settings.getlist('AUTOUNIT_INCLUDED_SETTINGS', [])
+        # Use the new setting, if empty, try the deprecated one
+        names = settings.getlist('AUTOUNIT_RECORD_SETTINGS', [])
+        if not names:
+            names = settings.getlist('AUTOUNIT_INCLUDED_SETTINGS', [])
         included = {name: settings.get(name) for name in names}
         return included
 

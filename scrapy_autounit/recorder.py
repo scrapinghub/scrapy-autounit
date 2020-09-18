@@ -43,6 +43,8 @@ class Recorder(Parser):
         self.fixture_counters = {}
         self._set_max_fixtures()
 
+        self.dont_record = self.settings.get('AUTOUNIT_DONT_RECORD', {})
+
         self.base_path = get_base_path(self.settings)
         self._create_dir(self.base_path, exist_ok=True)
         self._clear_fixtures()

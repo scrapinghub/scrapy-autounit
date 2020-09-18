@@ -7,9 +7,15 @@ from scrapy.utils.reqser import request_to_dict
 
 class Parser:
     def _clean_headers(self, headers):
-        excluded = self.spider.settings.get('AUTOUNIT_EXCLUDED_HEADERS', default=[])
+        # Use the new setting, if empty, try the deprecated one
+        excluded = self.spider.settings.get('AUTOUNIT_DONT_RECORD_HEADERS', [])
+        if not excluded:
+            excluded = self.spider.settings.get('AUTOUNIT_EXCLUDED_HEADERS', [])
         auth_headers = ['Authorization', 'Proxy-Authorization']
-        included = self.spider.settings.get('AUTOUNIT_INCLUDED_AUTH_HEADERS', default=[])
+        # Use the new setting, if empty, try the deprecated one
+        included = self.spider.settings.get('AUTOUNIT_RECORD_AUTH_HEADERS', [])
+        if not included:
+            included = self.spider.settings.get('AUTOUNIT_INCLUDED_AUTH_HEADERS', [])
         excluded.extend([h for h in auth_headers if h not in included])
         for header in excluded:
             headers.pop(header, None)
@@ -90,3 +96,20 @@ class Parser:
                 'data': data
             })
         return iter(original), parsed
+
+    def deprecated_settings(self):
+        mapping = {
+            'AUTOUNIT_SKIPPED_FIELDS': 'AUTOUNIT_DONT_TEST_OUTPUT_FIELDS',
+            'AUTOUNIT_REQUEST_SKIPPED_FIELDS': 'AUTOUNIT_DONT_TEST_REQUEST_ATTRS',
+            'AUTOUNIT_EXCLUDED_HEADERS': 'AUTOUNIT_DONT_RECORD_HEADERS',
+            'AUTOUNIT_INCLUDED_AUTH_HEADERS': 'AUTOUNIT_RECORD_AUTH_HEADERS',
+            'AUTOUNIT_INCLUDED_SETTINGS': 'AUTOUNIT_RECORD_SETTINGS',
+        }
+        warnings = []
+        for old, new in mapping.items():
+            if not self.spider.settings.get(old):
+                continue
+            warnings.append(
+                f"DEPRECATED: '{old}' is going to be "
+                f"removed soon. Please use '{new}' instead.")
+        return warnings

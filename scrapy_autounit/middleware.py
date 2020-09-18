@@ -36,6 +36,8 @@ class AutounitMiddleware:
 
     def engine_started(self):
         self.recorder = Recorder(self.crawler.spider)
+        for warning in self.recorder.deprecated_settings():
+            logger.warn(warning)
 
     def process_spider_input(self, response, spider):
         cassette = self.recorder.new_cassette(response)

@@ -96,10 +96,19 @@ class Player(Parser):
         found_data = self.parse_object(found)
 
         # Clean both objects using the skipped fields from settings
-        setting_name = 'AUTOUNIT_SKIPPED_FIELDS'
+        setting_names = (
+            'AUTOUNIT_DONT_TEST_OUTPUT_FIELDS',
+            'AUTOUNIT_SKIPPED_FIELDS'
+        )
         if expected_type == 'request':
-            setting_name = 'AUTOUNIT_REQUEST_SKIPPED_FIELDS'
-        to_clean = self.spider.settings.get(setting_name, default=[])
+            setting_names = (
+                'AUTOUNIT_DONT_TEST_REQUEST_ATTRS',
+                'AUTOUNIT_REQUEST_SKIPPED_FIELDS'
+            )
+        # Use the new setting, if empty, try the deprecated one
+        to_clean = self.spider.settings.get(setting_names[0], [])
+        if not to_clean:
+            to_clean = self.spider.settings.get(setting_names[1], [])
         self._clean(expected_data, found_data, to_clean)
 
         self._compare(
@@ -156,6 +165,9 @@ class Player(Parser):
     def playback(self, compare=True):
         self._check_python_version()
         self._init_spider()
+
+        for warning in self.deprecated_settings():
+            print(warning)
 
         attrs = {}
         attrs['init'] = self.get_spider_attrs()
