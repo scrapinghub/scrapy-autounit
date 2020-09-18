@@ -111,11 +111,10 @@ class Parser:
             'AUTOUNIT_INCLUDED_AUTH_HEADERS': 'AUTOUNIT_RECORD_AUTH_HEADERS',
             'AUTOUNIT_INCLUDED_SETTINGS': 'AUTOUNIT_RECORD_SETTINGS',
         }
+        message = "DEPRECATED: '{}' is going to be removed soon. Please use '{}' instead."
         warnings = []
         for old, new in mapping.items():
             if not self.spider.settings.get(old):
                 continue
-            warnings.append(
-                f"DEPRECATED: '{old}' is going to be "
-                f"removed soon. Please use '{new}' instead.")
+            warnings.append(message.format(old, new))
         return warnings
