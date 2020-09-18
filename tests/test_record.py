@@ -246,8 +246,8 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_FIELDS='_base_url',
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_FIELDS'))
+                AUTOUNIT_DONT_TEST_OUTPUT_FIELDS='_base_url',
+                AUTOUNIT_RECORD_SETTINGS='AUTOUNIT_DONT_TEST_OUTPUT_FIELDS'))
             spider.test()
 
     def test_spider_attributes_recursive(self):
@@ -334,7 +334,7 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.imports('import time')
             spider.custom_settings('''
-                AUTOUNIT_SKIPPED_FIELDS = ['ts']
+                AUTOUNIT_DONT_TEST_OUTPUT_FIELDS = ['ts']
             ''')
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
             spider.parse('''
@@ -348,7 +348,7 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.imports('import random')
             spider.custom_settings('''
-                AUTOUNIT_REQUEST_SKIPPED_FIELDS = ['url']
+                AUTOUNIT_DONT_TEST_REQUEST_ATTRS = ['url']
             ''')
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
             spider.parse('''
