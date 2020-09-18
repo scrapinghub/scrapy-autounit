@@ -380,9 +380,18 @@ class TestRecording(unittest.TestCase):
             spider.start_requests('''
                 yield scrapy.Request(
                     'data:text/plain,',
-                    meta={'metadata': [
-                        ('tuples', {'dicts': 'and'}, ['lists', 'in'], 'meta', 1, 20.5)
-                    ]}
+                    meta={
+                        'metadata': [
+                            (
+                                'tuples',
+                                {'dicts': 'and'},
+                                ['lists', 'in'],
+                                'meta',
+                                1,
+                                20.5
+                            )
+                        ]
+                    }
                 )
             ''')
             spider.parse('''
