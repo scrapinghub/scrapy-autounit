@@ -1,9 +1,9 @@
-import unittest
-import tempfile
-import subprocess
 import os
-import shutil
 import re
+import shutil
+import subprocess
+import tempfile
+import unittest
 
 
 SPIDER_TEMPLATE = '''
@@ -155,10 +155,7 @@ class CaseSpider(object):
         env = os.environ.copy()
         env['PYTHONPATH'] = self.dir  # doesn't work if == cwd
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
-        command_args = [
-            'scrapy', 'crawl', self._spider_name,
-            '-s', 'AUTOUNIT_ENABLED=1',
-        ]
+        command_args = ['scrapy', 'crawl', self._spider_name, '-s', 'AUTOUNIT_ENABLED=1']
         for k, v in (args or {}).items():
             command_args.append('-a')
             command_args.append('{}={}'.format(k, v))
@@ -187,9 +184,7 @@ class CaseSpider(object):
         env = os.environ.copy()
         env['SCRAPY_SETTINGS_MODULE'] = 'myproject.settings'
         result = run(
-            [
-                'python', '-m', 'unittest', 'discover', '-v'
-            ],
+            ['python', '-m', 'unittest', 'discover', '-v'],
             env=env,
             cwd=self.dir,
             stdout=subprocess.PIPE,
@@ -251,8 +246,8 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_EXCLUDED_FIELDS='_base_url',
-                AUTOUNIT_INCLUDED_SETTINGS='AUTOUNIT_EXCLUDED_FIELDS'))
+                AUTOUNIT_DONT_TEST_OUTPUT_FIELDS='_base_url',
+                AUTOUNIT_RECORD_SETTINGS='AUTOUNIT_DONT_TEST_OUTPUT_FIELDS'))
             spider.test()
 
     def test_spider_attributes_recursive(self):
@@ -339,7 +334,7 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.imports('import time')
             spider.custom_settings('''
-                AUTOUNIT_SKIPPED_FIELDS = ['ts']
+                AUTOUNIT_DONT_TEST_OUTPUT_FIELDS = ['ts']
             ''')
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
             spider.parse('''
@@ -353,7 +348,7 @@ class TestRecording(unittest.TestCase):
         with CaseSpider() as spider:
             spider.imports('import random')
             spider.custom_settings('''
-                AUTOUNIT_REQUEST_SKIPPED_FIELDS = ['url']
+                AUTOUNIT_DONT_TEST_REQUEST_ATTRS = ['url']
             ''')
             spider.start_requests("yield scrapy.Request('data:text/plain,')")
             spider.parse('''
@@ -385,9 +380,18 @@ class TestRecording(unittest.TestCase):
             spider.start_requests('''
                 yield scrapy.Request(
                     'data:text/plain,',
-                    meta={'metadata': [
-                        ('tuples', {'dicts': 'and'}, ['lists', 'in'], 'meta', 1, 20.5)
-                    ]}
+                    meta={
+                        'metadata': [
+                            (
+                                'tuples',
+                                {'dicts': 'and'},
+                                ['lists', 'in'],
+                                'meta',
+                                1,
+                                20.5
+                            )
+                        ]
+                    }
                 )
             ''')
             spider.parse('''
@@ -489,11 +493,8 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 5}
             """)
             spider.record()
-            expected_message = "AssertionError: The fixture's data length "\
-                               "doesn't match with the current callback's "\
-                               "output length."
-            with self.assertRaisesRegexp(AssertionError,
-                                         re.escape(expected_message)):
+            expected_message = "more item/s than expected"
+            with self.assertRaisesRegexp(AssertionError, re.escape(expected_message)):
                 spider.test(test_verbosity=True)
 
     def test_attribute_change_raises_error(self):
@@ -519,9 +520,8 @@ class TestRecording(unittest.TestCase):
                     yield scrapy.Request('data:text/plain,', dont_filter=True)
             """)
             spider.record()
-            expected_message = "Output arguments not equal!"
-            with self.assertRaisesRegexp(AssertionError,
-                                         re.escape(expected_message)):
+            expected_message = "Output arguments not equal"
+            with self.assertRaisesRegexp(AssertionError, re.escape(expected_message)):
                 spider.test(test_verbosity=True)
 
     def test_missing_parse_method_raises_assertionerror(self):

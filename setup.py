@@ -1,25 +1,27 @@
 import setuptools
 
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name='scrapy-autounit',
-    version='0.0.27',
+    version='0.0.28',
     author='',
     author_email='',
     description='Automatic unit test generation for Scrapy.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/fcanobrash/scrapy-autounit',
+    url='https://github.com/scrapinghub/scrapy-autounit',
     packages=setuptools.find_packages(),
     classifiers=[
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
     ],
     install_requires=[
-        'datadiff==2.0.0',
+        'testfixtures==6.14.1',
     ],
     entry_points = {
         'console_scripts': [
