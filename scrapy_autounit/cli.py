@@ -81,8 +81,9 @@ class CommandLine:
         return fixtures
 
     def _from_legacy_fixture(self, recorded):
-        encoding = recorded['encoding']
-        old = pickle.loads(recorded['data'], encoding=encoding)
+        encoding = recorded.get('encoding', 'utf-8')
+        data = recorded.get('data')
+        old = recorded if not data else pickle.loads(data, encoding=encoding)
         return Cassette(
             spider_name=old['spider_name'],
             request=old['request'],
