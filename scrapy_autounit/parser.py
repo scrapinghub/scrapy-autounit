@@ -1,5 +1,6 @@
 import copy
 
+from scrapy import Item
 from scrapy.http import Request, Response
 from scrapy.spiders import CrawlSpider
 from scrapy.utils.reqser import request_to_dict
@@ -77,7 +78,7 @@ class Parser:
             return self._request_to_dict(_object)
         elif isinstance(_object, Response):
             return self.parse_object(self._response_to_dict(_object))
-        elif isinstance(_object, dict):
+        elif isinstance(_object, (dict, Item)):
             for k, v in _object.items():
                 _object[k] = self.parse_object(v)
         elif isinstance(_object, list):

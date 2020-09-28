@@ -1,7 +1,7 @@
 from importlib import import_module
 import sys
 
-from scrapy import signals
+from scrapy import signals, Item
 from scrapy.exceptions import NotConfigured
 from scrapy.utils.misc import load_object, arg_to_iter
 from scrapy.utils.reqser import request_from_dict
@@ -81,6 +81,13 @@ class Player(Parser):
     def _compare(self, expected, found, message):
         x_label = "expected"
         y_label = "found"
+
+        if isinstance(expected, Item):
+            expected = dict(expected)
+
+        if isinstance(found, Item):
+            found = dict(found)
+
         compare(
             expected=expected,
             actual=found,
