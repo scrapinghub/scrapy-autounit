@@ -23,7 +23,7 @@ class AutounitMiddleware:
             raise NotConfigured('scrapy-autounit is not enabled')
 
         if settings.getint('CONCURRENT_REQUESTS') > 1:
-            logger.warn(
+            logger.warning(
                 'Recording with concurrency > 1! '
                 'Data races in shared object modification may create broken tests.'
             )
