@@ -103,20 +103,17 @@ class Player(Parser):
         found_data = self.parse_object(found)
 
         # Clean both objects using the skipped fields from settings
-        setting_names = (
-            'AUTOUNIT_DONT_TEST_OUTPUT_FIELDS',
-            'AUTOUNIT_SKIPPED_FIELDS'
-        )
         if expected_type == 'request':
-            setting_names = (
-                'AUTOUNIT_DONT_TEST_REQUEST_ATTRS',
-                'AUTOUNIT_REQUEST_SKIPPED_FIELDS'
-            )
-        # Use the new setting, if empty, try the deprecated one
-        to_clean = self.spider.settings.get(setting_names[0], [])
-        if not to_clean:
-            to_clean = self.spider.settings.get(setting_names[1], [])
-        self._clean(expected_data, found_data, to_clean)
+            # Filter meta keys
+            self._filter_meta(found_data)
+            self._filter_meta(expected_data)
+            # Filter request attributes
+            self._filter_request_attrs(found_data)
+            self._filter_request_attrs(expected_data)
+        else:
+            # Filter output fields
+            self._filter_output_fields(found_data)
+            self._filter_output_fields(expected_data)
 
         self._compare(
             expected=expected_data,
@@ -146,6 +143,29 @@ class Player(Parser):
                     self._len(expected), self.cassette.filename))
 
         return out
+
+    def _filter_request_attrs(self, request):
+        dont_test = self.spider.settings.get(
+            'AUTOUNIT_DONT_TEST_REQUEST_ATTRS', [])
+        if not dont_test:
+            dont_test = self.spider.settings.get(
+                'AUTOUNIT_REQUEST_SKIPPED_FIELDS', [])
+        for entry in dont_test:
+            request.pop(entry)
+
+    def _filter_meta(self, request):
+        dont_test = self.spider.settings.get('AUTOUNIT_DONT_TEST_META', [])
+        for path in dont_test:
+            self._clean_from_jmes(request['meta'], path)
+
+    def _filter_output_fields(self, item):
+        dont_test = self.spider.settings.get(
+            'AUTOUNIT_DONT_TEST_OUTPUT_FIELDS', [])
+        if not dont_test:
+            dont_test = self.spider.settings.get(
+                'AUTOUNIT_SKIPPED_FIELDS', [])
+        for entry in dont_test:
+            item.pop(entry)
 
     def _filter_attrs(self, attrs):
         dont_test_attrs = self.spider.settings.get(

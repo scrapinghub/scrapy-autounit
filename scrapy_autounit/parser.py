@@ -22,6 +22,38 @@ class Parser:
             headers.pop(header, None)
             headers.pop(header.encode(), None)
 
+    def _clean_from_jmes(self, full_obj, jmes_path, keys=[], nested_obj={}):
+        keys = keys or jmes_path.split('.')
+        nested_obj = nested_obj or full_obj
+
+        raw_key = keys.pop(0)
+        key = raw_key.strip('[]')
+        if not nested_obj.get(key):
+            return
+
+        if '[]' in raw_key:
+            if not keys:
+                nested_obj[key] = []
+            for item in nested_obj[key]:
+                self._clean_from_jmes(
+                    full_obj, jmes_path, keys=keys.copy(), nested_obj=item)
+        else:
+            if not keys:
+                nested_obj.pop(key)
+            else:
+                self._clean_from_jmes(
+                    full_obj, jmes_path, keys=keys, nested_obj=nested_obj[key])
+
+    def _parse_meta(self, request):
+        meta = {}
+        for key, value in request.get('meta').items():
+            if key != '_autounit_cassette':
+                meta[key] = self.parse_object(value)
+        dont_record = self.spider.settings.get('AUTOUNIT_DONT_RECORD_META', [])
+        for path in dont_record:
+            self._clean_from_jmes(meta, path)
+        return meta
+
     def _request_to_dict(self, request):
         _request = request_to_dict(request, spider=self.spider)
         if not _request['callback']:
@@ -31,11 +63,7 @@ class Parser:
             if rule is not None:
                 _request['callback'] = self.spider.rules[rule].callback
         self._clean_headers(_request['headers'])
-        _meta = {}
-        for key, value in _request.get('meta').items():
-            if key != '_autounit_cassette':
-                _meta[key] = self.parse_object(value)
-        _request['meta'] = _meta
+        _request['meta'] = self._parse_meta(_request)
         return _request
 
     def _response_to_dict(self, response):

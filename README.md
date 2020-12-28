@@ -149,6 +149,17 @@ For security reasons, Autounit already excludes `Authorization` and `Proxy-Autho
 If you want to include `Authorization` or `Proxy-Authorization` headers in your fixtures, add one or both of them to this list.  
 `Default: []`
 
+- **AUTOUNIT_DONT_RECORD_META**  
+Sets a list of jmespath-like keys to exclude from requests meta recording.  
+These keys will not be recorded in autounit fixtures.  
+Keys syntax supported so far: `single_key`, `key.subkey`, `key.list[]`, `key.list[].subkey`  
+`Default: []`
+
+- **AUTOUNIT_DONT_TEST_META**  
+Same as `AUTOUNIT_DONT_RECORD_META` but this only skips the specified meta keys at the testing stage.  
+The keys will be recorded in autounit fixtures.  
+`Default: []`
+
 ###### Spider attributes
 
 - **AUTOUNIT_DONT_RECORD_SPIDER_ATTRS**  
