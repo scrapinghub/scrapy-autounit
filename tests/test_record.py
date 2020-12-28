@@ -246,8 +246,8 @@ class TestRecording(unittest.TestCase):
                 yield {'a': 4}
             """)
             spider.record(settings=dict(
-                AUTOUNIT_DONT_TEST_OUTPUT_FIELDS='_base_url',
-                AUTOUNIT_RECORD_SETTINGS='AUTOUNIT_DONT_TEST_OUTPUT_FIELDS'))
+                AUTOUNIT_DONT_TEST_OUTPUT_FIELDS=['_base_url'],
+                AUTOUNIT_RECORD_SETTINGS=['AUTOUNIT_DONT_TEST_OUTPUT_FIELDS']))
             spider.test()
 
     def test_spider_attributes_recursive(self):
