@@ -36,7 +36,7 @@ class Parser:
                 nested_obj[key] = []
             for item in nested_obj[key]:
                 self._clean_from_jmes(
-                    full_obj, jmes_path, keys=keys.copy(), nested_obj=item)
+                    full_obj, jmes_path, keys=list(keys), nested_obj=item)
         else:
             if not keys:
                 nested_obj.pop(key)
