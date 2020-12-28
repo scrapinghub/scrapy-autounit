@@ -86,8 +86,26 @@ class Recorder(Parser):
         path = os.path.join(self.base_path, 'tests', self.spider_name)
         shutil.rmtree(path, ignore_errors=True)
 
+    def _get_fixture_name(self, index):
+        default_name = 'fixture%s.bin' % index
+
+        attr = self.settings.get('AUTOUNIT_FIXTURE_NAMING_ATTR', None)
+        if not attr:
+            return default_name
+
+        value = getattr(self.spider, attr, None)
+        if not value:
+            msg = (
+                "Could not find '{attr}' attribute in spider. "
+                'Using default fixture naming.'
+            )
+            self.spider.logger.warning(msg.format(attr=attr))
+            return default_name
+
+        return 'fixture_{attr}_{index}.bin'.format(attr=value, index=index)
+
     def _add_sample(self, index, test_dir, cassette):
-        filename = 'fixture%s.bin' % str(index)
+        filename = self._get_fixture_name(index)
         path = os.path.join(test_dir, filename)
         cassette.filename = filename
         with open(path, 'wb') as outfile:

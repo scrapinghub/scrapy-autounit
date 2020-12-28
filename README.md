@@ -120,6 +120,13 @@ Sets the maximum number of fixtures to store per callback.
 This is an extra string element to add to the test path and name between the spider name and callback name. You can use this to separate tests from the same spider with different configurations.  
 `Default: None`
 
+- **AUTOUNIT_FIXTURE_NAMING_ATTR**  
+Allows you to specify a spider attribute to be used in your fixtures names.  
+The fixture name will consist of your specified attribute value and the internal callback counter.  
+`fixture_{your_spider_attr}_{internal_counter}.bin`  
+If this settings is not specified, the default `fixtureN.bin` naming will be used.  
+`Default: None`
+
 ###### Output
 
 - **AUTOUNIT_DONT_TEST_OUTPUT_FIELDS**  
