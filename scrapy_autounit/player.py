@@ -78,15 +78,20 @@ class Player(Parser):
                 continue
         return middlewares
 
+    def _item_to_dict(self, value):
+        if not isinstance(value, Item):
+            return value
+        as_dict = dict(value)
+        for key, val in as_dict.items():
+            as_dict[key] = self._item_to_dict(val)
+        return as_dict
+
     def _compare(self, expected, found, message):
         x_label = "expected"
         y_label = "found"
 
-        if isinstance(expected, Item):
-            expected = dict(expected)
-
-        if isinstance(found, Item):
-            found = dict(found)
+        expected = self._item_to_dict(expected)
+        found = self._item_to_dict(found)
 
         compare(
             expected=expected,
