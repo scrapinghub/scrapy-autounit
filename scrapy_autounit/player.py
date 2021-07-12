@@ -18,8 +18,7 @@ class Player(Parser):
     @classmethod
     def from_fixture(cls, path):
         cassette = Cassette.from_fixture(path)
-        player = Player(cassette)
-        return player
+        return cls(cassette)
 
     def _len(self, iterator):
         return len(list(iterator)) + 1
